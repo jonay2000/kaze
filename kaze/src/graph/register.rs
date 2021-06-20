@@ -22,12 +22,12 @@ use std::ptr;
 ///
 /// let c = Context::new();
 ///
-/// let m = c.module("MyModule");
+/// let m = c.module("m", "MyModule");
 ///
 /// let my_reg = m.reg("my_reg", 32);
 /// my_reg.default_value(0xfadebabeu32); // Optional
-/// my_reg.drive_next(!my_reg.value);
-/// m.output("my_output", my_reg.value);
+/// my_reg.drive_next(!my_reg);
+/// m.output("my_output", my_reg);
 /// ```
 ///
 /// [`default_value`]: Self::default_value
@@ -37,7 +37,7 @@ use std::ptr;
 pub struct Register<'a> {
     pub(crate) data: &'a RegisterData<'a>,
     /// This `Register`'s current value.
-    pub value: &'a Signal<'a>,
+    pub(crate) value: &'a Signal<'a>,
 }
 
 impl<'a> Register<'a> {
@@ -58,12 +58,12 @@ impl<'a> Register<'a> {
     ///
     /// let c = Context::new();
     ///
-    /// let m = c.module("MyModule");
+    /// let m = c.module("m", "MyModule");
     ///
     /// let my_reg = m.reg("my_reg", 32);
     /// my_reg.default_value(0xfadebabeu32); // Optional
-    /// my_reg.drive_next(!my_reg.value);
-    /// m.output("my_output", my_reg.value);
+    /// my_reg.drive_next(!my_reg);
+    /// m.output("my_output", my_reg);
     /// ```
     ///
     /// [`value`]: Self::value
@@ -95,16 +95,17 @@ impl<'a> Register<'a> {
     ///
     /// let c = Context::new();
     ///
-    /// let m = c.module("MyModule");
+    /// let m = c.module("m", "MyModule");
     ///
     /// let my_reg = m.reg("my_reg", 32);
     /// my_reg.default_value(0xfadebabeu32); // Optional
-    /// my_reg.drive_next(!my_reg.value); // my_reg's value will toggle with each positive clock edge
-    /// m.output("my_output", my_reg.value);
+    /// my_reg.drive_next(!my_reg); // my_reg's value will toggle with each positive clock edge
+    /// m.output("my_output", my_reg);
     /// ```
     ///
     /// [`value`]: Self::value
-    pub fn drive_next(&'a self, n: &'a Signal<'a>) {
+    pub fn drive_next<S: Into<&'a Signal<'a>>>(&'a self, n: S) {
+        let n = n.into();
         if !ptr::eq(self.data.module, n.module) {
             panic!("Attempted to drive register \"{}\"'s next value with a signal from another module.", self.data.name);
         }
@@ -138,7 +139,7 @@ mod tests {
     fn default_value_already_specified_error() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
         let r = m.reg("r", 32);
 
         r.default_value(0xfadebabeu32);
@@ -154,7 +155,7 @@ mod tests {
     fn default_value_cannot_bit_into_bit_width_error_1() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
         let r = m.reg("r", 7);
 
         // Panic
@@ -168,7 +169,7 @@ mod tests {
     fn default_value_cannot_bit_into_bit_width_error_2() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
         let r = m.reg("r", 2);
 
         // Panic
@@ -182,7 +183,7 @@ mod tests {
     fn default_value_cannot_bit_into_bit_width_error_3() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
         let r = m.reg("r", 4);
 
         // Panic
@@ -196,7 +197,7 @@ mod tests {
     fn default_value_cannot_bit_into_bit_width_error_4() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
         let r = m.reg("r", 1);
 
         // Panic
@@ -210,10 +211,10 @@ mod tests {
     fn drive_next_separate_module_error() {
         let c = Context::new();
 
-        let m1 = c.module("A");
+        let m1 = c.module("a", "A");
         let l = m1.lit(true, 1);
 
-        let m2 = c.module("b");
+        let m2 = c.module("b", "B");
         let r = m2.reg("r", 1);
 
         // Panic
@@ -227,7 +228,7 @@ mod tests {
     fn drive_next_incompatible_bit_width_error() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
         let r = m.reg("r", 3);
         let i = m.input("i", 5);
 
@@ -242,7 +243,7 @@ mod tests {
     fn drive_next_already_driven_error() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
         let r = m.reg("r", 32);
         let i = m.input("i", 32);
 

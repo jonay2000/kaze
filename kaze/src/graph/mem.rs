@@ -26,7 +26,7 @@ use std::ptr;
 ///
 /// let c = Context::new();
 ///
-/// let m = c.module("MyModule");
+/// let m = c.module("m", "MyModule");
 ///
 /// let my_mem = m.mem("my_mem", 1, 32);
 /// // Optional, unless no write port is specified
@@ -38,7 +38,7 @@ use std::ptr;
 #[must_use]
 pub struct Mem<'a> {
     pub(super) context: &'a Context<'a>,
-    pub(super) module: &'a Module<'a>,
+    pub(crate) module: &'a Module<'a>,
 
     pub(crate) name: String,
     pub(crate) address_bit_width: u32,
@@ -71,7 +71,7 @@ impl<'a> Mem<'a> {
     ///
     /// let c = Context::new();
     ///
-    /// let m = c.module("MyModule");
+    /// let m = c.module("m", "MyModule");
     ///
     /// let my_mem = m.mem("my_mem", 1, 32);
     /// // Optional, unless no write port is specified
@@ -117,7 +117,7 @@ impl<'a> Mem<'a> {
     ///
     /// let c = Context::new();
     ///
-    /// let m = c.module("MyModule");
+    /// let m = c.module("m", "MyModule");
     ///
     /// let my_mem = m.mem("my_mem", 1, 32);
     /// // Optional, unless no write port is specified
@@ -126,7 +126,9 @@ impl<'a> Mem<'a> {
     /// my_mem.write_port(m.high(), m.lit(0xabad1deau32, 32), m.high());
     /// m.output("my_output", my_mem.read_port(m.high(), m.high()));
     /// ```
-    pub fn read_port(&'a self, address: &'a Signal<'a>, enable: &'a Signal<'a>) -> &Signal<'a> {
+    pub fn read_port<S1: Into<&'a Signal<'a>>, S2: Into<&'a Signal<'a>>>(&'a self, address: S1, enable: S2) -> &Signal<'a> {
+        let address = address.into();
+        let enable = enable.into();
         // TODO: Limit amount of read ports added?
         if address.bit_width() != self.address_bit_width {
             panic!("Attempted to specify a read port for memory \"{}\" in module \"{}\" with an address signal with {} bit(s), but this memory has {} address bit(s).", self.name, self.module.name, address.bit_width(), self.address_bit_width);
@@ -167,7 +169,7 @@ impl<'a> Mem<'a> {
     ///
     /// let c = Context::new();
     ///
-    /// let m = c.module("MyModule");
+    /// let m = c.module("m", "MyModule");
     ///
     /// let my_mem = m.mem("my_mem", 1, 32);
     /// // Optional, unless no write port is specified
@@ -177,12 +179,15 @@ impl<'a> Mem<'a> {
     /// m.output("my_output", my_mem.read_port(m.high(), m.high()));
     /// ```
     // TODO: byte/word enable? How might that interface look?
-    pub fn write_port(
+    pub fn write_port<S1: Into<&'a Signal<'a>>, S2: Into<&'a Signal<'a>>, S3: Into<&'a Signal<'a>>>(
         &'a self,
-        address: &'a Signal<'a>,
-        value: &'a Signal<'a>,
-        enable: &'a Signal<'a>,
+        address: S1,
+        value: S2,
+        enable: S3,
     ) {
+        let address = address.into();
+        let value = value.into();
+        let enable = enable.into();
         if self.write_port.borrow().is_some() {
             panic!("Attempted to specify a write port for memory \"{}\" in module \"{}\", but this memory already has a write port.", self.name, self.module.name);
         }
@@ -224,7 +229,7 @@ mod tests {
     fn initial_contents_already_specified_error() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
         let mem = m.mem("mem", 1, 1);
 
         mem.initial_contents(&[true, false]);
@@ -240,7 +245,7 @@ mod tests {
     fn initial_contents_length_error() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
         let mem = m.mem("mem", 1, 1);
 
         // Panic
@@ -254,7 +259,7 @@ mod tests {
     fn initial_contents_element_bit_width_error() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
         let mem = m.mem("mem", 1, 1);
 
         // Panic
@@ -268,7 +273,7 @@ mod tests {
     fn read_port_address_bit_width_error() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
         let mem = m.mem("mem", 1, 1);
 
         // Panic
@@ -282,7 +287,7 @@ mod tests {
     fn read_port_enable_bit_width_error() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
         let mem = m.mem("mem", 1, 1);
 
         // Panic
@@ -296,7 +301,7 @@ mod tests {
     fn write_port_already_specified_error() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
         let mem = m.mem("mem", 1, 1);
 
         mem.write_port(m.low(), m.low(), m.low());
@@ -312,7 +317,7 @@ mod tests {
     fn write_port_address_bit_width_error() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
         let mem = m.mem("mem", 1, 1);
 
         // Panic
@@ -326,7 +331,7 @@ mod tests {
     fn write_port_value_bit_width_error() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
         let mem = m.mem("mem", 1, 1);
 
         // Panic
@@ -340,7 +345,7 @@ mod tests {
     fn write_port_enable_bit_width_error() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
         let mem = m.mem("mem", 1, 1);
 
         // Panic

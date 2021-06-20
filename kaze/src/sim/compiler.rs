@@ -2,50 +2,30 @@ use super::ir::*;
 use super::state_elements::*;
 
 use crate::graph;
-use crate::module_context::*;
+use crate::graph::SignalOps;
 
 use typed_arena::Arena;
 
 use std::collections::HashMap;
 
-pub(super) struct Compiler<'graph, 'context_arena, 'expr_arena> {
-    state_elements: &'context_arena StateElements<'graph, 'context_arena>,
-    signal_reference_counts: &'context_arena HashMap<
-        (
-            &'context_arena ModuleContext<'graph, 'context_arena>,
-            &'graph graph::Signal<'graph>,
-        ),
-        u32,
-    >,
-    context_arena: &'context_arena Arena<ModuleContext<'graph, 'context_arena>>,
+// TODO: Can we merge the context and expr_arena lifetimes?
+pub(super) struct Compiler<'graph, 'context, 'expr_arena> {
+    state_elements: &'context StateElements<'graph>,
+    signal_reference_counts: &'context HashMap<&'graph graph::Signal<'graph>, u32>,
     expr_arena: &'expr_arena Arena<Expr<'expr_arena>>,
 
-    signal_exprs: HashMap<
-        (
-            &'context_arena ModuleContext<'graph, 'context_arena>,
-            &'graph graph::Signal<'graph>,
-        ),
-        &'expr_arena Expr<'expr_arena>,
-    >,
+    signal_exprs: HashMap<&'graph graph::Signal<'graph>, &'expr_arena Expr<'expr_arena>>,
 }
 
-impl<'graph, 'context_arena, 'expr_arena> Compiler<'graph, 'context_arena, 'expr_arena> {
+impl<'graph, 'context, 'expr_arena> Compiler<'graph, 'context, 'expr_arena> {
     pub fn new(
-        state_elements: &'context_arena StateElements<'graph, 'context_arena>,
-        signal_reference_counts: &'context_arena HashMap<
-            (
-                &'context_arena ModuleContext<'graph, 'context_arena>,
-                &'graph graph::Signal<'graph>,
-            ),
-            u32,
-        >,
-        context_arena: &'context_arena Arena<ModuleContext<'graph, 'context_arena>>,
+        state_elements: &'context StateElements<'graph>,
+        signal_reference_counts: &'context HashMap<&'graph graph::Signal<'graph>, u32>,
         expr_arena: &'expr_arena Arena<Expr<'expr_arena>>,
-    ) -> Compiler<'graph, 'context_arena, 'expr_arena> {
+    ) -> Compiler<'graph, 'context, 'expr_arena> {
         Compiler {
             state_elements,
             signal_reference_counts,
-            context_arena,
             expr_arena,
 
             signal_exprs: HashMap::new(),
@@ -55,29 +35,26 @@ impl<'graph, 'context_arena, 'expr_arena> Compiler<'graph, 'context_arena, 'expr
     pub fn compile_signal(
         &mut self,
         signal: &'graph graph::Signal<'graph>,
-        context: &'context_arena ModuleContext<'graph, 'context_arena>,
         a: &mut AssignmentContext<'expr_arena>,
     ) -> &'expr_arena Expr<'expr_arena> {
-        enum Frame<'graph, 'context_arena> {
+        enum Frame<'graph> {
             Enter {
                 signal: &'graph graph::Signal<'graph>,
-                context: &'context_arena ModuleContext<'graph, 'context_arena>,
             },
             Leave {
                 signal: &'graph graph::Signal<'graph>,
-                context: &'context_arena ModuleContext<'graph, 'context_arena>,
             },
         }
 
         let mut frames = Vec::new();
-        frames.push(Frame::Enter { signal, context });
+        frames.push(Frame::Enter { signal });
 
         let mut results = Vec::new();
 
         while let Some(frame) = frames.pop() {
             if let Some((key, mut expr)) = match frame {
-                Frame::Enter { signal, context } => {
-                    let key = (context, signal);
+                Frame::Enter { signal } => {
+                    let key = signal;
                     if let Some(expr) = self.signal_exprs.get(&key) {
                         results.push(*expr);
                         continue;
@@ -89,24 +66,27 @@ impl<'graph, 'context_arena, 'expr_arena> Compiler<'graph, 'context_arena, 'expr
                             bit_width,
                         } => Some((key, Expr::from_constant(value, bit_width, &self.expr_arena))),
 
-                        graph::SignalData::Input {
-                            ref name,
-                            bit_width,
-                        } => {
-                            if let Some((instance, parent)) = context.instance_and_parent {
+                        graph::SignalData::Input { data } => {
+                            if let Some(driven_value) = data.driven_value.borrow().clone() {
                                 frames.push(Frame::Enter {
-                                    signal: instance.driven_inputs.borrow()[name],
-                                    context: parent,
+                                    signal: driven_value,
                                 });
                                 None
                             } else {
+                                let bit_width = data.bit_width;
                                 let target_type = ValueType::from_bit_width(bit_width);
                                 let expr = self.expr_arena.alloc(Expr::Ref {
-                                    name: name.clone(),
+                                    name: data.name.clone(),
                                     scope: Scope::Member,
                                 });
                                 Some((key, self.gen_mask(expr, bit_width, target_type)))
                             }
+                        }
+                        graph::SignalData::Output { data } => {
+                            frames.push(Frame::Enter {
+                                signal: data.source,
+                            });
+                            None
                         }
 
                         graph::SignalData::Reg { .. } => Some((
@@ -118,113 +98,96 @@ impl<'graph, 'context_arena, 'expr_arena> Compiler<'graph, 'context_arena, 'expr
                         )),
 
                         graph::SignalData::UnOp { source, .. } => {
-                            frames.push(Frame::Leave { signal, context });
+                            frames.push(Frame::Leave { signal });
                             frames.push(Frame::Enter {
                                 signal: source,
-                                context,
                             });
                             None
                         }
                         graph::SignalData::SimpleBinOp { lhs, rhs, .. } => {
-                            frames.push(Frame::Leave { signal, context });
+                            frames.push(Frame::Leave { signal });
                             frames.push(Frame::Enter {
                                 signal: lhs,
-                                context,
                             });
                             frames.push(Frame::Enter {
                                 signal: rhs,
-                                context,
                             });
                             None
                         }
                         graph::SignalData::AdditiveBinOp { lhs, rhs, .. } => {
-                            frames.push(Frame::Leave { signal, context });
+                            frames.push(Frame::Leave { signal });
                             frames.push(Frame::Enter {
                                 signal: lhs,
-                                context,
                             });
                             frames.push(Frame::Enter {
                                 signal: rhs,
-                                context,
                             });
                             None
                         }
                         graph::SignalData::ComparisonBinOp { lhs, rhs, .. } => {
-                            frames.push(Frame::Leave { signal, context });
+                            frames.push(Frame::Leave { signal });
                             frames.push(Frame::Enter {
                                 signal: lhs,
-                                context,
                             });
                             frames.push(Frame::Enter {
                                 signal: rhs,
-                                context,
                             });
                             None
                         }
                         graph::SignalData::ShiftBinOp { lhs, rhs, .. } => {
-                            frames.push(Frame::Leave { signal, context });
+                            frames.push(Frame::Leave { signal });
                             frames.push(Frame::Enter {
                                 signal: lhs,
-                                context,
                             });
                             frames.push(Frame::Enter {
                                 signal: rhs,
-                                context,
                             });
                             None
                         }
 
                         graph::SignalData::Mul { lhs, rhs, .. } => {
-                            frames.push(Frame::Leave { signal, context });
+                            frames.push(Frame::Leave { signal });
                             frames.push(Frame::Enter {
                                 signal: lhs,
-                                context,
                             });
                             frames.push(Frame::Enter {
                                 signal: rhs,
-                                context,
                             });
                             None
                         }
                         graph::SignalData::MulSigned { lhs, rhs, .. } => {
-                            frames.push(Frame::Leave { signal, context });
+                            frames.push(Frame::Leave { signal });
                             frames.push(Frame::Enter {
                                 signal: lhs,
-                                context,
                             });
                             frames.push(Frame::Enter {
                                 signal: rhs,
-                                context,
                             });
                             None
                         }
 
                         graph::SignalData::Bits { source, .. } => {
-                            frames.push(Frame::Leave { signal, context });
+                            frames.push(Frame::Leave { signal });
                             frames.push(Frame::Enter {
                                 signal: source,
-                                context,
                             });
                             None
                         }
 
                         graph::SignalData::Repeat { source, .. } => {
-                            frames.push(Frame::Leave { signal, context });
+                            frames.push(Frame::Leave { signal });
                             frames.push(Frame::Enter {
                                 signal: source,
-                                context,
                             });
                             None
                         }
                         graph::SignalData::Concat { lhs, rhs, .. } => {
-                            frames.push(Frame::Leave { signal, context });
+                            frames.push(Frame::Leave { signal });
                             frames.push(Frame::Enter {
                                 signal: lhs,
-                                context,
                             });
                             frames.push(Frame::Enter {
                                 signal: rhs,
-                                context,
                             });
                             None
                         }
@@ -235,29 +198,15 @@ impl<'graph, 'context_arena, 'expr_arena> Compiler<'graph, 'context_arena, 'expr
                             when_false,
                             ..
                         } => {
-                            frames.push(Frame::Leave { signal, context });
+                            frames.push(Frame::Leave { signal });
                             frames.push(Frame::Enter {
                                 signal: cond,
-                                context,
                             });
                             frames.push(Frame::Enter {
                                 signal: when_true,
-                                context,
                             });
                             frames.push(Frame::Enter {
                                 signal: when_false,
-                                context,
-                            });
-                            None
-                        }
-
-                        graph::SignalData::InstanceOutput {
-                            instance, ref name, ..
-                        } => {
-                            let output = instance.instantiated_module.outputs.borrow()[name];
-                            frames.push(Frame::Enter {
-                                signal: output,
-                                context: context.get_child(instance, self.context_arena),
                             });
                             None
                         }
@@ -267,7 +216,7 @@ impl<'graph, 'context_arena, 'expr_arena> Compiler<'graph, 'context_arena, 'expr
                             address,
                             enable,
                         } => {
-                            let mem = &self.state_elements.mems[&(context, mem)];
+                            let mem = &self.state_elements.mems[&mem];
                             let read_signal_names = &mem.read_signal_names[&(address, enable)];
                             Some((
                                 key,
@@ -279,13 +228,14 @@ impl<'graph, 'context_arena, 'expr_arena> Compiler<'graph, 'context_arena, 'expr
                         }
                     }
                 }
-                Frame::Leave { signal, context } => {
-                    let key = (context, signal);
+                Frame::Leave { signal } => {
+                    let key = signal;
 
                     match signal.data {
                         graph::SignalData::Lit { .. } => unreachable!(),
 
                         graph::SignalData::Input { .. } => unreachable!(),
+                        graph::SignalData::Output { .. } => unreachable!(),
 
                         graph::SignalData::Reg { .. } => unreachable!(),
 
@@ -634,8 +584,6 @@ impl<'graph, 'context_arena, 'expr_arena> Compiler<'graph, 'context_arena, 'expr
                                 }),
                             ))
                         }
-
-                        graph::SignalData::InstanceOutput { .. } => unreachable!(),
 
                         graph::SignalData::MemReadPortOutput { .. } => unreachable!(),
                     }

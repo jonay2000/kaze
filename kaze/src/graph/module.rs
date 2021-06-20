@@ -1,12 +1,13 @@
 use super::constant::*;
 use super::context::*;
-use super::instance::*;
 use super::mem::*;
 use super::register::*;
 use super::signal::*;
 
 use std::cell::RefCell;
 use std::collections::BTreeMap;
+use std::hash::{Hash, Hasher};
+use std::ops::{Add, BitAnd, BitOr, BitXor, Mul, Not, Shl, Shr, Sub};
 use std::ptr;
 
 /// A self-contained and potentially-reusable hardware design unit, created by the [`Context::module`] method.
@@ -22,34 +23,42 @@ use std::ptr;
 ///
 /// let c = Context::new();
 ///
-/// let m = c.module("MyModule");
+/// let m = c.module("m", "MyModule");
 /// m.output("out", m.input("in", 1));
 /// ```
 // TODO: Validation error if a module has no inputs/outputs
+// TODO: Document composing modules (even if it's really basic)
 #[must_use]
 pub struct Module<'a> {
     context: &'a Context<'a>,
 
+    pub(crate) parent: Option<&'a Module<'a>>,
+
+    pub(crate) instance_name: String,
     pub(crate) name: String,
 
-    pub(crate) inputs: RefCell<BTreeMap<String, &'a Signal<'a>>>,
-    pub(crate) outputs: RefCell<BTreeMap<String, &'a Signal<'a>>>,
+    // TODO: Do we need to duplicate the input/output names here?
+    pub(crate) inputs: RefCell<BTreeMap<String, &'a Input<'a>>>,
+    pub(crate) outputs: RefCell<BTreeMap<String, &'a Output<'a>>>,
     pub(crate) registers: RefCell<Vec<&'a Signal<'a>>>,
-    pub(crate) instances: RefCell<Vec<&'a Instance<'a>>>,
+    pub(crate) modules: RefCell<Vec<&'a Module<'a>>>,
     pub(crate) mems: RefCell<Vec<&'a Mem<'a>>>,
 }
 
 impl<'a> Module<'a> {
-    pub(super) fn new(context: &'a Context<'a>, name: String) -> Module<'a> {
+    pub(super) fn new(context: &'a Context<'a>, parent: Option<&'a Module<'a>>, instance_name: String, name: String) -> Module<'a> {
         Module {
             context,
 
+            parent,
+
+            instance_name,
             name,
 
             inputs: RefCell::new(BTreeMap::new()),
             outputs: RefCell::new(BTreeMap::new()),
             registers: RefCell::new(Vec::new()),
-            instances: RefCell::new(Vec::new()),
+            modules: RefCell::new(Vec::new()),
             mems: RefCell::new(Vec::new()),
         }
     }
@@ -69,7 +78,7 @@ impl<'a> Module<'a> {
     ///
     /// let c = Context::new();
     ///
-    /// let m = c.module("MyModule");
+    /// let m = c.module("m", "MyModule");
     ///
     /// let eight_bit_const = m.lit(0xffu32, 8);
     /// let one_bit_const = m.lit(0u32, 1);
@@ -111,7 +120,7 @@ impl<'a> Module<'a> {
     ///
     /// let c = Context::new();
     ///
-    /// let m = c.module("MyModule");
+    /// let m = c.module("m", "MyModule");
     ///
     /// // The following two signals are semantically equivalent:
     /// let low1 = m.low();
@@ -130,7 +139,7 @@ impl<'a> Module<'a> {
     ///
     /// let c = Context::new();
     ///
-    /// let m = c.module("MyModule");
+    /// let m = c.module("m", "MyModule");
     ///
     /// // The following two signals are semantically equivalent:
     /// let high1 = m.high();
@@ -153,11 +162,11 @@ impl<'a> Module<'a> {
     ///
     /// let c = Context::new();
     ///
-    /// let m = c.module("MyModule");
+    /// let m = c.module("m", "MyModule");
     ///
     /// let my_input = m.input("my_input", 80);
     /// ```
-    pub fn input<S: Into<String>>(&'a self, name: S, bit_width: u32) -> &Signal<'a> {
+    pub fn input<S: Into<String>>(&'a self, name: S, bit_width: u32) -> &Input<'a> {
         let name = name.into();
         // TODO: Error if name already exists in this context
         if bit_width < MIN_SIGNAL_BIT_WIDTH {
@@ -172,14 +181,24 @@ impl<'a> Module<'a> {
                 bit_width, MAX_SIGNAL_BIT_WIDTH
             );
         }
-        let input = self.context.signal_arena.alloc(Signal {
+        let data = self.context.input_data_arena.alloc(InputData {
+            name: name.clone(),
+            bit_width,
+            driven_value: RefCell::new(None),
+        });
+        let value = self.context.signal_arena.alloc(Signal {
             context: self.context,
             module: self,
 
             data: SignalData::Input {
-                name: name.clone(),
-                bit_width,
+                data,
             },
+        });
+        let input = self.context.input_arena.alloc(Input {
+            module: self,
+
+            data,
+            value,
         });
         self.inputs.borrow_mut().insert(name, input);
         input
@@ -198,17 +217,30 @@ impl<'a> Module<'a> {
     ///
     /// let c = Context::new();
     ///
-    /// let m = c.module("MyModule");
+    /// let m = c.module("m", "MyModule");
     ///
     /// let some_signal = m.high();
     /// m.output("my_output", some_signal);
     /// ```
-    pub fn output<S: Into<String>>(&'a self, name: S, source: &'a Signal<'a>) {
+    pub fn output<S1: Into<String>, S2: Into<&'a Signal<'a>>>(&'a self, name: S1, source: S2) -> &Output<'a> {
+        let name = name.into();
+        let source = source.into();
         if !ptr::eq(self, source.module) {
             panic!("Cannot output a signal from another module.");
         }
         // TODO: Error if name already exists in this context
-        self.outputs.borrow_mut().insert(name.into(), source);
+        let data = self.context.output_data_arena.alloc(OutputData {
+            module: self,
+
+            name: name.clone(),
+            source,
+            bit_width: source.bit_width(),
+        });
+        let output = self.context.output_arena.alloc(Output {
+            data,
+        });
+        self.outputs.borrow_mut().insert(name, output);
+        output
     }
 
     /// Creates a [`Register`] in this `Module` called `name` with `bit_width` bits.
@@ -224,12 +256,12 @@ impl<'a> Module<'a> {
     ///
     /// let c = Context::new();
     ///
-    /// let m = c.module("MyModule");
+    /// let m = c.module("m", "MyModule");
     ///
     /// let my_reg = m.reg("my_reg", 32);
     /// my_reg.default_value(0xfadebabeu32); // Optional
-    /// my_reg.drive_next(!my_reg.value);
-    /// m.output("my_output", my_reg.value);
+    /// my_reg.drive_next(!my_reg);
+    /// m.output("my_output", my_reg);
     /// ```
     pub fn reg<S: Into<String>>(&'a self, name: S, bit_width: u32) -> &Register<'a> {
         // TODO: Error if name already exists in this context and update docs for Signal::reg_next and Signal::reg_next_with_default to reflect this
@@ -276,19 +308,22 @@ impl<'a> Module<'a> {
     ///
     /// let c = Context::new();
     ///
-    /// let m = c.module("MyModule");
+    /// let m = c.module("m", "MyModule");
     ///
     /// let cond = m.input("cond", 1);
     /// let a = m.input("a", 8);
     /// let b = m.input("b", 8);
     /// m.output("my_output", m.mux(cond, a, b)); // Outputs a when cond is high, b otherwise
     /// ```
-    pub fn mux(
+    pub fn mux<S1: Into<&'a Signal<'a>>, S2: Into<&'a Signal<'a>>, S3: Into<&'a Signal<'a>>>(
         &'a self,
-        cond: &'a Signal<'a>,
-        when_true: &'a Signal<'a>,
-        when_false: &'a Signal<'a>,
+        cond: S1,
+        when_true: S2,
+        when_false: S3,
     ) -> &Signal<'a> {
+        let cond = cond.into();
+        let when_true = when_true.into();
+        let when_false = when_false.into();
         // TODO: This is an optimization to support sugar; if that doesn't go well, remove this
         if when_true == when_false {
             return when_true;
@@ -326,52 +361,6 @@ impl<'a> Module<'a> {
         })
     }
 
-    /// Creates an [`Instance`] called `instance_name` of the `Module` identified by `module_name` in this [`Context`] inside this `Module` definition.
-    ///
-    /// # Panics
-    ///
-    /// Panics if a `Module` identified by `module_name` doesn't exist in this [`Context`].
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use kaze::*;
-    ///
-    /// let c = Context::new();
-    ///
-    /// // Inner module (simple pass-through)
-    /// let inner = c.module("Inner");
-    /// inner.output("o", inner.input("i", 32));
-    ///
-    /// // Outer module (wraps a single `inner` instance)
-    /// let outer = c.module("Outer");
-    /// let inner_inst = outer.instance("inner_inst", "Inner");
-    /// inner_inst.drive_input("i", outer.input("i", 32));
-    /// outer.output("o", inner_inst.output("o"));
-    /// ```
-    pub fn instance<S: Into<String>>(
-        &'a self,
-        instance_name: S,
-        module_name: &str,
-    ) -> &Instance<'a> {
-        // TODO: Error if instance_name already exists in this context
-        match self.context.modules.borrow().get(module_name) {
-            Some(instantiated_module) => {
-                let ret = self.context.instance_arena.alloc(Instance {
-                    context: self.context,
-                    module: self,
-
-                    instantiated_module,
-                    name: instance_name.into(),
-                    driven_inputs: RefCell::new(BTreeMap::new()),
-                });
-                self.instances.borrow_mut().push(ret);
-                ret
-            }
-            _ => panic!("Attempted to instantiate a module identified by \"{}\", but no such module exists in this context.", module_name)
-        }
-    }
-
     /// Creates a [`Mem`] in this `Module` called `name` with `address_bit_width` address bits and `element_bit_width` element bits.
     ///
     /// The size of this memory will be `1 << address_bit_width` elements, each `element_bit_width` bits wide.
@@ -387,7 +376,7 @@ impl<'a> Module<'a> {
     ///
     /// let c = Context::new();
     ///
-    /// let m = c.module("MyModule");
+    /// let m = c.module("m", "MyModule");
     ///
     /// let my_mem = m.mem("my_mem", 1, 32);
     /// // Optional, unless no write port is specified
@@ -445,6 +434,227 @@ impl<'a> Module<'a> {
     }
 }
 
+impl<'a> ModuleParent<'a> for Module<'a> {
+    // TODO: Docs, error handling
+    fn module<S1: Into<String>, S2: Into<String>>(&'a self, instance_name: S1, name: S2) -> &Module {
+        let instance_name = instance_name.into();
+        let name = name.into();
+        let module = self.context.module_arena.alloc(Module::new(self.context, Some(self), instance_name, name));
+        self.modules.borrow_mut().push(module);
+        module
+    }
+}
+
+impl<'a> Eq for &'a Module<'a> {}
+
+impl<'a> Hash for &'a Module<'a> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write_usize(*self as *const _ as usize)
+    }
+}
+
+impl<'a> PartialEq for &'a Module<'a> {
+    fn eq(&self, other: &Self) -> bool {
+        ptr::eq(*self, *other)
+    }
+}
+
+// TODO: Move?
+// TODO: Doc
+// TODO: bit width as const generic param?
+#[must_use]
+pub struct Input<'a> {
+    // TODO: Double-check that we need this (I think we need it for error checking in drive)
+    pub(crate) module: &'a Module<'a>,
+
+    pub(crate) data: &'a InputData<'a>,
+    pub(crate) value: &'a Signal<'a>,
+}
+
+impl<'a> Input<'a> {
+    // TODO: Doc
+    // TODO: Merge error cases with Instance::drive_input?
+    // TODO: Rename i?
+    pub fn drive<S: Into<&'a Signal<'a>>>(&'a self, i: S) {
+        let i = i.into();
+        // TODO: Change text from instance -> module in appropriate places?
+        if let Some(parent) = self.module.parent {
+            if !ptr::eq(parent, i.module) {
+                // TODO: Clarify?
+                panic!("Attempted to drive an instance input with a signal from a different module than that instance's parent module.");
+            }
+        } else {
+            // TODO: Proper panic + test!
+            panic!("OH NOES");
+        }
+        let mut driven_value = self.data.driven_value.borrow_mut();
+        if driven_value.is_some() {
+            panic!("Attempted to drive an input called \"{}\" on an instance of \"{}\", but this input is already driven for this instance.", self.data.name, self.module.name);
+        }
+        if self.data.bit_width != i.bit_width() {
+            panic!("Attempted to drive an input called \"{}\" on an instance of \"{}\", but this input and the provided signal have different bit widths ({} and {}, respectively).", self.data.name, self.module.name, self.data.bit_width, i.bit_width());
+        }
+        *driven_value = Some(i);
+    }
+}
+
+impl<'a> From<&'a Input<'a>> for &'a Signal<'a> {
+    fn from(i: &'a Input<'a>) -> Self {
+        i.value
+    }
+}
+
+impl<'a> From<&'a Output<'a>> for &'a Signal<'a> {
+    fn from(o: &'a Output<'a>) -> Self {
+        let parent = o.data.module.parent.expect("TODO better error pls");
+        o.data.module.context.signal_arena.alloc(Signal {
+            context: o.data.module.context,
+            module: parent,
+
+            data: SignalData::Output {
+                data: o.data,
+            },
+        })
+    }
+}
+
+impl<'a> From<&'a Register<'a>> for &'a Signal<'a> {
+    fn from(r: &'a Register<'a>) -> &'a Signal<'a> {
+        r.value
+    }
+}
+
+macro_rules! op_impl {
+    ($($t:tt)*) => ($(
+        impl<'a, S: Into<&'a Signal<'a>>> Add<S> for &'a $t<'a> {
+            type Output = &'a Signal<'a>;
+
+            fn add(self, rhs: S) -> Self::Output {
+                let lhs: &'a Signal<'a> = self.into();
+                let rhs: &'a Signal<'a> = rhs.into();
+                lhs + rhs
+            }
+        }
+
+        impl<'a, S: Into<&'a Signal<'a>>> BitAnd<S> for &'a $t<'a> {
+            type Output = &'a Signal<'a>;
+
+            fn bitand(self, rhs: S) -> Self::Output {
+                let lhs: &'a Signal<'a> = self.into();
+                let rhs: &'a Signal<'a> = rhs.into();
+                lhs & rhs
+            }
+        }
+
+        impl<'a, S: Into<&'a Signal<'a>>> BitOr<S> for &'a $t<'a> {
+            type Output = &'a Signal<'a>;
+
+            fn bitor(self, rhs: S) -> Self::Output {
+                let lhs: &'a Signal<'a> = self.into();
+                let rhs: &'a Signal<'a> = rhs.into();
+                lhs | rhs
+            }
+        }
+
+        impl<'a, S: Into<&'a Signal<'a>>> BitXor<S> for &'a $t<'a> {
+            type Output = &'a Signal<'a>;
+
+            fn bitxor(self, rhs: S) -> Self::Output {
+                let lhs: &'a Signal<'a> = self.into();
+                let rhs: &'a Signal<'a> = rhs.into();
+                lhs ^ rhs
+            }
+        }
+
+        impl<'a, S: Into<&'a Signal<'a>>> Mul<S> for &'a $t<'a> {
+            type Output = &'a Signal<'a>;
+
+            fn mul(self, rhs: S) -> Self::Output {
+                let lhs: &'a Signal<'a> = self.into();
+                let rhs: &'a Signal<'a> = rhs.into();
+                lhs * rhs
+            }
+        }
+
+        impl<'a> Not for &'a $t<'a> {
+            type Output = &'a Signal<'a>;
+
+            fn not(self) -> Self::Output {
+                let s: &'a Signal<'a> = self.into();
+                !s
+            }
+        }
+
+        impl<'a, S: Into<&'a Signal<'a>>> Shl<S> for &'a $t<'a> {
+            type Output = &'a Signal<'a>;
+
+            fn shl(self, rhs: S) -> Self::Output {
+                let lhs: &'a Signal<'a> = self.into();
+                let rhs: &'a Signal<'a> = rhs.into();
+                lhs << rhs
+            }
+        }
+
+        impl<'a, S: Into<&'a Signal<'a>>> Shr<S> for &'a $t<'a> {
+            type Output = &'a Signal<'a>;
+
+            fn shr(self, rhs: S) -> Self::Output {
+                let lhs: &'a Signal<'a> = self.into();
+                let rhs: &'a Signal<'a> = rhs.into();
+                lhs >> rhs
+            }
+        }
+
+        impl<'a, S: Into<&'a Signal<'a>>> Sub<S> for &'a $t<'a> {
+            type Output = &'a Signal<'a>;
+
+            fn sub(self, rhs: S) -> Self::Output {
+                let lhs: &'a Signal<'a> = self.into();
+                let rhs: &'a Signal<'a> = rhs.into();
+                lhs - rhs
+            }
+        }
+    )*)
+}
+
+// TODO: Use this macro for all of the ops on Signal too? Or keep this duplication?
+op_impl! { Input Output Register }
+
+impl<'a> SignalOps<'a> for &'a Input<'a> {
+}
+
+impl<'a> SignalOps<'a> for &'a Output<'a> {
+}
+
+impl<'a> SignalOps<'a> for &'a Register<'a> {
+}
+
+pub(crate) struct InputData<'a> {
+    // TODO: Do we need this stored here too?
+    pub name: String,
+    pub bit_width: u32,
+    // TODO: Rename?
+    pub driven_value: RefCell<Option<&'a Signal<'a>>>,
+}
+
+// TODO: Move?
+// TODO: Doc
+// TODO: must_use?
+// TODO: bit width as const generic param?
+pub struct Output<'a> {
+    pub(crate) data: &'a OutputData<'a>,
+}
+
+pub(crate) struct OutputData<'a> {
+    // TODO: Do we need this?
+    pub module: &'a Module<'a>,
+
+    // TODO: Do we need this stored here too?
+    pub name: String,
+    pub source: &'a Signal<'a>,
+    pub bit_width: u32,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -456,7 +666,7 @@ mod tests {
     fn lit_bit_width_lt_min_error() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
 
         // Panic
         let _ = m.lit(false, 0);
@@ -469,7 +679,7 @@ mod tests {
     fn lit_bit_width_gt_max_error() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
 
         // Panic
         let _ = m.lit(false, 129);
@@ -482,7 +692,7 @@ mod tests {
     fn lit_value_cannot_bit_into_bit_width_error_1() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
 
         // Panic
         let _ = m.lit(128u32, 7);
@@ -495,7 +705,7 @@ mod tests {
     fn lit_value_cannot_bit_into_bit_width_error_2() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
 
         // Panic
         let _ = m.lit(128u64, 2);
@@ -508,7 +718,7 @@ mod tests {
     fn lit_value_cannot_bit_into_bit_width_error_3() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
 
         // Panic
         let _ = m.lit(1023u128, 4);
@@ -521,7 +731,7 @@ mod tests {
     fn lit_value_cannot_bit_into_bit_width_error_4() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
 
         // Panic
         let _ = m.lit(65536u32, 1);
@@ -534,7 +744,7 @@ mod tests {
     fn input_width_lt_min_error() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
 
         // Panic
         let _ = m.input("i", 0);
@@ -547,7 +757,7 @@ mod tests {
     fn input_width_gt_max_error() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
 
         // Panic
         let _ = m.input("i", 129);
@@ -558,9 +768,9 @@ mod tests {
     fn output_separate_module_error() {
         let c = Context::new();
 
-        let m1 = c.module("A");
+        let m1 = c.module("a", "A");
 
-        let m2 = c.module("B");
+        let m2 = c.module("b", "B");
         let i = m2.high();
 
         // Panic
@@ -574,7 +784,7 @@ mod tests {
     fn reg_bit_width_lt_min_error() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
 
         // Panic
         let _ = m.reg("r", 0);
@@ -587,7 +797,7 @@ mod tests {
     fn reg_bit_width_gt_max_error() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
 
         // Panic
         let _ = m.reg("r", 129);
@@ -598,10 +808,10 @@ mod tests {
     fn mux_cond_separate_module_error() {
         let c = Context::new();
 
-        let a = c.module("A");
+        let a = c.module("a", "A");
         let l1 = a.lit(false, 1);
 
-        let b = c.module("B");
+        let b = c.module("b", "B");
         let l2 = b.lit(32u8, 8);
         let l3 = b.lit(32u8, 8);
 
@@ -614,10 +824,10 @@ mod tests {
     fn mux_when_true_separate_module_error() {
         let c = Context::new();
 
-        let a = c.module("A");
+        let a = c.module("a", "A");
         let l1 = a.lit(32u8, 8);
 
-        let b = c.module("B");
+        let b = c.module("b", "B");
         let l2 = b.lit(true, 1);
         let l3 = b.lit(32u8, 8);
 
@@ -630,10 +840,10 @@ mod tests {
     fn mux_when_false_separate_module_error() {
         let c = Context::new();
 
-        let a = c.module("A");
+        let a = c.module("a", "A");
         let l1 = a.lit(32u8, 8);
 
-        let b = c.module("B");
+        let b = c.module("b", "B");
         let l2 = b.lit(true, 1);
         let l3 = b.lit(32u8, 8);
 
@@ -646,7 +856,7 @@ mod tests {
     fn mux_cond_bit_width_error() {
         let c = Context::new();
 
-        let a = c.module("A");
+        let a = c.module("a", "A");
         let l1 = a.lit(2u8, 2);
         let l2 = a.lit(32u8, 8);
         let l3 = a.lit(32u8, 8);
@@ -662,7 +872,7 @@ mod tests {
     fn mux_true_false_bit_width_error() {
         let c = Context::new();
 
-        let a = c.module("A");
+        let a = c.module("a", "A");
         let l1 = a.lit(false, 1);
         let l2 = a.lit(3u8, 3);
         let l3 = a.lit(3u8, 5);
@@ -673,25 +883,12 @@ mod tests {
 
     #[test]
     #[should_panic(
-        expected = "Attempted to instantiate a module identified by \"nope\", but no such module exists in this context."
-    )]
-    fn instantiate_nonexistent_module_error() {
-        let c = Context::new();
-
-        let m = c.module("A");
-
-        // Panic
-        let _ = m.instance("lol", "nope");
-    }
-
-    #[test]
-    #[should_panic(
         expected = "Cannot create a memory with 0 address bit(s). Signals must not be narrower than 1 bit(s)."
     )]
     fn mem_address_bit_width_lt_min_error() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
 
         // Panic
         let _ = m.mem("mem", 0, 1);
@@ -704,7 +901,7 @@ mod tests {
     fn mem_address_bit_width_gt_max_error() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
 
         // Panic
         let _ = m.mem("mem", 129, 1);
@@ -717,7 +914,7 @@ mod tests {
     fn mem_element_bit_width_lt_min_error() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
 
         // Panic
         let _ = m.mem("mem", 1, 0);
@@ -730,9 +927,62 @@ mod tests {
     fn mem_element_bit_width_gt_max_error() {
         let c = Context::new();
 
-        let m = c.module("A");
+        let m = c.module("a", "A");
 
         // Panic
         let _ = m.mem("mem", 1, 129);
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "Attempted to drive an instance input with a signal from a different module than that instance's parent module."
+    )]
+    fn input_drive_different_module_than_parent_module_error() {
+        let c = Context::new();
+
+        let m1 = c.module("a", "A");
+        let i1 = m1.input("a", 1);
+
+        let m2 = c.module("b", "B");
+
+        let inner = m2.module("inner", "Inner");
+        let a = inner.input("a", 1);
+
+        // Panic
+        a.drive(i1);
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "Attempted to drive an input called \"a\" on an instance of \"Inner\", but this input is already driven for this instance."
+    )]
+    fn input_drive_already_driven_error() {
+        let c = Context::new();
+
+        let m = c.module("a", "A");
+
+        let inner = m.module("inner", "Inner");
+        let a = inner.input("a", 1);
+
+        a.drive(m.input("i1", 1));
+
+        // Panic
+        a.drive(m.input("i2", 1));
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "Attempted to drive an input called \"a\" on an instance of \"Inner\", but this input and the provided signal have different bit widths (1 and 32, respectively)."
+    )]
+    fn input_drive_incompatible_bit_widths_error() {
+        let c = Context::new();
+
+        let m = c.module("a", "A");
+
+        let inner = m.module("inner", "Inner");
+        let a = inner.input("a", 1);
+
+        // Panic
+        a.drive(m.input("i1", 32));
     }
 }

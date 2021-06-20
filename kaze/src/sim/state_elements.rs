@@ -1,7 +1,4 @@
 use crate::graph;
-use crate::module_context::*;
-
-use typed_arena::Arena;
 
 use std::collections::HashMap;
 
@@ -26,25 +23,13 @@ pub struct ReadSignalNames {
     pub value_name: String,
 }
 
-pub(super) struct StateElements<'graph, 'arena> {
-    pub mems: HashMap<
-        (
-            &'arena ModuleContext<'graph, 'arena>,
-            &'graph graph::Mem<'graph>,
-        ),
-        Mem<'graph>,
-    >,
-    pub regs: HashMap<
-        (
-            &'arena ModuleContext<'graph, 'arena>,
-            &'graph graph::Signal<'graph>,
-        ),
-        Register<'graph>,
-    >,
+pub(super) struct StateElements<'a> {
+    pub mems: HashMap<&'a graph::Mem<'a>, Mem<'a>>,
+    pub regs: HashMap<&'a graph::Signal<'a>, Register<'a>>,
 }
 
-impl<'graph, 'arena> StateElements<'graph, 'arena> {
-    pub fn new() -> StateElements<'graph, 'arena> {
+impl<'a> StateElements<'a> {
+    pub fn new() -> StateElements<'a> {
         StateElements {
             mems: HashMap::new(),
             regs: HashMap::new(),
@@ -54,31 +39,22 @@ impl<'graph, 'arena> StateElements<'graph, 'arena> {
     // TODO: Move this to ctor and iterate over input module outputs there?
     pub fn gather(
         &mut self,
-        signal: &'graph graph::Signal<'graph>,
-        context: &'arena ModuleContext<'graph, 'arena>,
-        context_arena: &'arena Arena<ModuleContext<'graph, 'arena>>,
-        signal_reference_counts: &mut HashMap<
-            (
-                &'arena ModuleContext<'graph, 'arena>,
-                &'graph graph::Signal<'graph>,
-            ),
-            u32,
-        >,
+        signal: &'a graph::Signal<'a>,
+        signal_reference_counts: &mut HashMap<&'a graph::Signal<'a>, u32>,
     ) {
-        struct Frame<'graph, 'arena> {
-            signal: &'graph graph::Signal<'graph>,
-            context: &'arena ModuleContext<'graph, 'arena>,
+        // TODO: Do we even need this with just the one member?
+        struct Frame<'a> {
+            signal: &'a graph::Signal<'a>,
         }
 
         let mut frames = Vec::new();
-        frames.push(Frame { signal, context });
+        frames.push(Frame { signal });
 
         while let Some(frame) = frames.pop() {
             let signal = frame.signal;
-            let context = frame.context;
 
             let reference_count = signal_reference_counts
-                .entry((context, signal))
+                .entry(signal)
                 .or_insert(0);
             *reference_count += 1;
 
@@ -89,17 +65,21 @@ impl<'graph, 'arena> StateElements<'graph, 'arena> {
             match signal.data {
                 graph::SignalData::Lit { .. } => (),
 
-                graph::SignalData::Input { ref name, .. } => {
-                    if let Some((instance, parent)) = context.instance_and_parent {
+                graph::SignalData::Input { data } => {
+                    if let Some(driven_value) = data.driven_value.borrow().clone() {
                         frames.push(Frame {
-                            signal: instance.driven_inputs.borrow()[name],
-                            context: parent,
+                            signal: driven_value,
                         });
                     }
                 }
+                graph::SignalData::Output { data } => {
+                    frames.push(Frame {
+                        signal: data.source,
+                    });
+                }
 
                 graph::SignalData::Reg { data } => {
-                    let key = (context, signal);
+                    let key = signal;
                     let value_name = format!("__reg_{}_{}", data.name, self.regs.len());
                     let next_name = format!("{}_next", value_name);
                     self.regs.insert(
@@ -112,99 +92,81 @@ impl<'graph, 'arena> StateElements<'graph, 'arena> {
                     );
                     frames.push(Frame {
                         signal: data.next.borrow().unwrap(),
-                        context,
                     });
                 }
 
                 graph::SignalData::UnOp { source, .. } => {
                     frames.push(Frame {
                         signal: source,
-                        context,
                     });
                 }
                 graph::SignalData::SimpleBinOp { lhs, rhs, .. } => {
                     frames.push(Frame {
                         signal: lhs,
-                        context,
                     });
                     frames.push(Frame {
                         signal: rhs,
-                        context,
                     });
                 }
                 graph::SignalData::AdditiveBinOp { lhs, rhs, .. } => {
                     frames.push(Frame {
                         signal: lhs,
-                        context,
                     });
                     frames.push(Frame {
                         signal: rhs,
-                        context,
                     });
                 }
                 graph::SignalData::ComparisonBinOp { lhs, rhs, .. } => {
                     frames.push(Frame {
                         signal: lhs,
-                        context,
                     });
                     frames.push(Frame {
                         signal: rhs,
-                        context,
                     });
                 }
                 graph::SignalData::ShiftBinOp { lhs, rhs, .. } => {
                     frames.push(Frame {
                         signal: lhs,
-                        context,
                     });
                     frames.push(Frame {
                         signal: rhs,
-                        context,
                     });
                 }
 
                 graph::SignalData::Mul { lhs, rhs, .. } => {
                     frames.push(Frame {
                         signal: lhs,
-                        context,
                     });
                     frames.push(Frame {
                         signal: rhs,
-                        context,
                     });
                 }
                 graph::SignalData::MulSigned { lhs, rhs, .. } => {
                     frames.push(Frame {
                         signal: lhs,
-                        context,
                     });
                     frames.push(Frame {
                         signal: rhs,
-                        context,
                     });
                 }
 
                 graph::SignalData::Bits { source, .. } => {
                     frames.push(Frame {
                         signal: source,
-                        context,
                     });
                 }
 
                 graph::SignalData::Repeat { source, .. } => {
                     frames.push(Frame {
                         signal: source,
-                        context,
                     });
                 }
                 graph::SignalData::Concat { lhs, rhs, .. } => {
                     frames.push(Frame {
                         signal: lhs,
-                        context,
                     });
                     frames.push(Frame {
                         signal: rhs,
-                        context,
                     });
                 }
 
@@ -216,31 +178,17 @@ impl<'graph, 'arena> StateElements<'graph, 'arena> {
                 } => {
                     frames.push(Frame {
                         signal: cond,
-                        context,
                     });
                     frames.push(Frame {
                         signal: when_true,
-                        context,
                     });
                     frames.push(Frame {
                         signal: when_false,
-                        context,
-                    });
-                }
-
-                graph::SignalData::InstanceOutput {
-                    instance, ref name, ..
-                } => {
-                    let output = instance.instantiated_module.outputs.borrow()[name];
-                    let context = context.get_child(instance, context_arena);
-                    frames.push(Frame {
-                        signal: output,
-                        context,
                     });
                 }
 
                 graph::SignalData::MemReadPortOutput { mem, .. } => {
-                    let key = (context, mem);
+                    let key = mem;
                     let mem_name = format!("{}_{}", mem.name, self.mems.len());
                     // TODO: It might actually be too conservative to trace all read ports,
                     //  as we only know that the write port and _this_ read port are reachable
@@ -276,25 +224,20 @@ impl<'graph, 'arena> StateElements<'graph, 'arena> {
                     for (address, enable) in mem.read_ports.borrow().iter() {
                         frames.push(Frame {
                             signal: address,
-                            context,
                         });
                         frames.push(Frame {
                             signal: enable,
-                            context,
                         });
                     }
                     if let Some((address, value, enable)) = *mem.write_port.borrow() {
                         frames.push(Frame {
                             signal: address,
-                            context,
                         });
                         frames.push(Frame {
                             signal: value,
-                            context,
                         });
                         frames.push(Frame {
                             signal: enable,
-                            context,
                         });
                     }
                 }
