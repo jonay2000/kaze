@@ -840,7 +840,10 @@ fn reg_next_test_module<'a, P: ModuleParent<'a>>(p: &'a P) -> &Module<'a> {
 }
 
 fn reg_next_with_default_test_module<'a, P: ModuleParent<'a>>(p: &'a P) -> &Module<'a> {
-    let m = p.module("reg_next_with_default_test_module", "RegNextWithDefaultTestModule");
+    let m = p.module(
+        "reg_next_with_default_test_module",
+        "RegNextWithDefaultTestModule",
+    );
 
     let i = m.input("i", 1);
 
@@ -859,20 +862,22 @@ fn instantiation_test_module_comb<'a, P: ModuleParent<'a>>(p: &'a P) -> &Module<
     }
 
     impl<'a> InstantiationTestModuleCombInner<'a> {
-        fn new<S: Into<String>, P: ModuleParent<'a>>(instance_name: S, p: &'a P) -> InstantiationTestModuleCombInner<'a> {
+        fn new<S: Into<String>, P: ModuleParent<'a>>(
+            instance_name: S,
+            p: &'a P,
+        ) -> InstantiationTestModuleCombInner<'a> {
             let m = p.module(instance_name, "InstantiationTestModuleCombInner");
             let i1 = m.input("i1", 32);
             let i2 = m.input("i2", 32);
             let o = m.output("o", i1 & i2);
-            InstantiationTestModuleCombInner {
-                i1,
-                i2,
-                o,
-            }
+            InstantiationTestModuleCombInner { i1, i2, o }
         }
     }
 
-    let m = p.module("instantiation_test_module_comb", "InstantiationTestModuleComb");
+    let m = p.module(
+        "instantiation_test_module_comb",
+        "InstantiationTestModuleComb",
+    );
     let inner1 = InstantiationTestModuleCombInner::new("inner1", m);
     inner1.i1.drive(m.input("i1", 32));
     inner1.i2.drive(m.input("i2", 32));
@@ -895,7 +900,10 @@ fn instantiation_test_module_reg<'a, P: ModuleParent<'a>>(p: &'a P) -> &Module<'
     }
 
     impl<'a> InstantiationTestModuleRegInner<'a> {
-        fn new<S: Into<String>, P: ModuleParent<'a>>(instance_name: S, p: &'a P) -> InstantiationTestModuleRegInner<'a> {
+        fn new<S: Into<String>, P: ModuleParent<'a>>(
+            instance_name: S,
+            p: &'a P,
+        ) -> InstantiationTestModuleRegInner<'a> {
             let m = p.module(instance_name, "InstantiationTestModuleRegInner");
             let i1 = m.input("i1", 32);
             let i2 = m.input("i2", 32);
@@ -903,15 +911,14 @@ fn instantiation_test_module_reg<'a, P: ModuleParent<'a>>(p: &'a P) -> &Module<'
             r.default_value(0u32);
             r.drive_next(i1 & i2);
             let o = m.output("o", r);
-            InstantiationTestModuleRegInner {
-                i1,
-                i2,
-                o,
-            }
+            InstantiationTestModuleRegInner { i1, i2, o }
         }
     }
 
-    let m = p.module("instantiation_test_module_reg", "InstantiationTestModuleReg");
+    let m = p.module(
+        "instantiation_test_module_reg",
+        "InstantiationTestModuleReg",
+    );
     let inner1 = InstantiationTestModuleRegInner::new("inner1", m);
     inner1.i1.drive(m.input("i1", 32));
     inner1.i2.drive(m.input("i2", 32));
@@ -933,14 +940,14 @@ fn nested_instantiation_test_module<'a, P: ModuleParent<'a>>(p: &'a P) -> &Modul
     }
 
     impl<'a> NestedInstantiationTestModuleInnerInner<'a> {
-        fn new<S: Into<String>, P: ModuleParent<'a>>(instance_name: S, p: &'a P) -> NestedInstantiationTestModuleInnerInner<'a> {
+        fn new<S: Into<String>, P: ModuleParent<'a>>(
+            instance_name: S,
+            p: &'a P,
+        ) -> NestedInstantiationTestModuleInnerInner<'a> {
             let m = p.module(instance_name, "NestedInstantiationTestModuleInnerInner");
             let i = m.input("i", 32);
             let o = m.output("o", i);
-            NestedInstantiationTestModuleInnerInner {
-                i,
-                o,
-            }
+            NestedInstantiationTestModuleInnerInner { i, o }
         }
     }
 
@@ -951,22 +958,24 @@ fn nested_instantiation_test_module<'a, P: ModuleParent<'a>>(p: &'a P) -> &Modul
     }
 
     impl<'a> NestedInstantiationTestModuleInner<'a> {
-        fn new<S: Into<String>, P: ModuleParent<'a>>(instance_name: S, p: &'a P) -> NestedInstantiationTestModuleInner<'a> {
+        fn new<S: Into<String>, P: ModuleParent<'a>>(
+            instance_name: S,
+            p: &'a P,
+        ) -> NestedInstantiationTestModuleInner<'a> {
             let m = p.module(instance_name, "NestedInstantiationTestModuleInner");
             let inner = NestedInstantiationTestModuleInnerInner::new("inner", m);
             let i1 = m.input("i1", 32);
             let i2 = m.input("i2", 32);
             inner.i.drive(i1 & i2);
             let o = m.output("o", inner.o);
-            NestedInstantiationTestModuleInner {
-                i1,
-                i2,
-                o,
-            }
+            NestedInstantiationTestModuleInner { i1, i2, o }
         }
     }
 
-    let m = p.module("nested_instantiation_test_module", "NestedInstantiationTestModule");
+    let m = p.module(
+        "nested_instantiation_test_module",
+        "NestedInstantiationTestModule",
+    );
     let inner1 = NestedInstantiationTestModuleInner::new("inner1", m);
     inner1.i1.drive(m.input("i1", 32));
     inner1.i2.drive(m.input("i2", 32));
@@ -1066,7 +1075,10 @@ fn trace_test_module_2<'a, P: ModuleParent<'a>>(p: &'a P) -> &Module<'a> {
     }
 
     impl<'a> TraceTestModule2Inner<'a> {
-        fn new<S: Into<String>, P: ModuleParent<'a>>(instance_name: S, p: &'a P) -> TraceTestModule2Inner<'a> {
+        fn new<S: Into<String>, P: ModuleParent<'a>>(
+            instance_name: S,
+            p: &'a P,
+        ) -> TraceTestModule2Inner<'a> {
             let m = p.module(instance_name, "TraceTestModule2Inner");
             let i1 = m.input("i1", 32);
             let i2 = m.input("i2", 32);
@@ -1074,11 +1086,7 @@ fn trace_test_module_2<'a, P: ModuleParent<'a>>(p: &'a P) -> &Module<'a> {
             r.default_value(0u32);
             r.drive_next(i1 & i2);
             let o = m.output("o", r);
-            TraceTestModule2Inner {
-                i1,
-                i2,
-                o,
-            }
+            TraceTestModule2Inner { i1, i2, o }
         }
     }
 

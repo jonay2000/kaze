@@ -126,7 +126,11 @@ impl<'a> Mem<'a> {
     /// my_mem.write_port(m.high(), m.lit(0xabad1deau32, 32), m.high());
     /// m.output("my_output", my_mem.read_port(m.high(), m.high()));
     /// ```
-    pub fn read_port<S1: Into<&'a Signal<'a>>, S2: Into<&'a Signal<'a>>>(&'a self, address: S1, enable: S2) -> &Signal<'a> {
+    pub fn read_port<S1: Into<&'a Signal<'a>>, S2: Into<&'a Signal<'a>>>(
+        &'a self,
+        address: S1,
+        enable: S2,
+    ) -> &Signal<'a> {
         let address = address.into();
         let enable = enable.into();
         // TODO: Limit amount of read ports added?
@@ -179,7 +183,11 @@ impl<'a> Mem<'a> {
     /// m.output("my_output", my_mem.read_port(m.high(), m.high()));
     /// ```
     // TODO: byte/word enable? How might that interface look?
-    pub fn write_port<S1: Into<&'a Signal<'a>>, S2: Into<&'a Signal<'a>>, S3: Into<&'a Signal<'a>>>(
+    pub fn write_port<
+        S1: Into<&'a Signal<'a>>,
+        S2: Into<&'a Signal<'a>>,
+        S3: Into<&'a Signal<'a>>,
+    >(
         &'a self,
         address: S1,
         value: S2,

@@ -21,6 +21,7 @@ use std::io::{Result, Write};
 
 #[derive(Default)]
 pub struct GenerationOptions {
+    pub override_module_name: Option<String>,
     pub tracing: bool,
 }
 
@@ -35,10 +36,7 @@ pub fn generate<'a, W: Write>(
     let mut state_elements = StateElements::new();
     let mut signal_reference_counts = HashMap::new();
     for (_, output) in m.outputs.borrow().iter() {
-        state_elements.gather(
-            output.data.source,
-            &mut signal_reference_counts,
-        );
+        state_elements.gather(output.data.source, &mut signal_reference_counts);
     }
 
     struct TraceSignal {
@@ -67,11 +65,7 @@ pub fn generate<'a, W: Write>(
 
     let expr_arena = Arena::new();
     let mut prop_context = AssignmentContext::new(&expr_arena);
-    let mut c = Compiler::new(
-        &state_elements,
-        &signal_reference_counts,
-        &expr_arena,
-    );
+    let mut c = Compiler::new(&state_elements, &signal_reference_counts, &expr_arena);
     for (name, input) in m.inputs.borrow().iter() {
         add_trace_signal(m, name.clone(), name.clone(), input.data.bit_width);
     }
@@ -186,8 +180,10 @@ pub fn generate<'a, W: Write>(
 
     let mut w = code_writer::CodeWriter::new(w);
 
+    let module_name = options.override_module_name.unwrap_or_else(|| m.name.clone());
+
     w.append_indent()?;
-    w.append(&format!("pub struct {}", m.name))?;
+    w.append(&format!("pub struct {}", module_name))?;
     if options.tracing {
         w.append("<T: kaze::runtime::tracing::Trace>")?;
     }
@@ -295,7 +291,7 @@ pub fn generate<'a, W: Write>(
     if options.tracing {
         w.append("<T: kaze::runtime::tracing::Trace>")?;
     }
-    w.append(&format!(" {}", m.name))?;
+    w.append(&format!(" {}", module_name))?;
     if options.tracing {
         w.append("<T>")?;
     }
@@ -308,10 +304,10 @@ pub fn generate<'a, W: Write>(
     if options.tracing {
         w.append(&format!(
             "mut trace: T) -> std::io::Result<{}<T>> {{",
-            m.name
+            module_name
         ))?;
     } else {
-        w.append(&format!(") -> {} {{", m.name))?;
+        w.append(&format!(") -> {} {{", module_name))?;
     }
     w.append_newline()?;
     w.indent();
@@ -322,7 +318,10 @@ pub fn generate<'a, W: Write>(
             trace_signals: &HashMap<&'a graph::Module<'a>, Vec<TraceSignal>>,
             w: &mut code_writer::CodeWriter<W>,
         ) -> Result<()> {
-            w.append_line(&format!("trace.push_module(\"{}\")?;", module.instance_name))?;
+            w.append_line(&format!(
+                "trace.push_module(\"{}\")?;",
+                module.instance_name
+            ))?;
 
             if let Some(module_trace_signals) = trace_signals.get(&module) {
                 for trace_signal in module_trace_signals.iter() {
@@ -351,7 +350,7 @@ pub fn generate<'a, W: Write>(
     if options.tracing {
         w.append("Ok(")?;
     }
-    w.append(&format!("{} {{", m.name))?;
+    w.append(&format!("{} {{", module_name))?;
     w.append_newline()?;
     w.indent();
 

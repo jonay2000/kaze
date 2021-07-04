@@ -6,10 +6,7 @@ pub fn validate_module_hierarchy<'a>(m: &'a graph::Module<'a>) {
     detect_combinational_loops(m, m);
 }
 
-fn detect_undriven_registers_and_inputs<'a>(
-    m: &graph::Module<'a>,
-    root: &graph::Module<'a>,
-) {
+fn detect_undriven_registers_and_inputs<'a>(m: &graph::Module<'a>, root: &graph::Module<'a>) {
     for register in m.registers.borrow().iter() {
         match register.data {
             graph::SignalData::Reg { ref data } => {
@@ -28,17 +25,11 @@ fn detect_undriven_registers_and_inputs<'a>(
             }
         }
 
-        detect_undriven_registers_and_inputs(
-            module,
-            root,
-        );
+        detect_undriven_registers_and_inputs(module, root);
     }
 }
 
-fn detect_mem_errors<'a>(
-    m: &graph::Module<'a>,
-    root: &graph::Module<'a>,
-) {
+fn detect_mem_errors<'a>(m: &graph::Module<'a>, root: &graph::Module<'a>) {
     for mem in m.mems.borrow().iter() {
         if mem.read_ports.borrow().is_empty() {
             panic!("Cannot generate code for module \"{}\" because module \"{}\" contains a memory called \"{}\" which doesn't have any read ports.", root.name, m.name, mem.name);
@@ -54,10 +45,7 @@ fn detect_mem_errors<'a>(
     }
 }
 
-fn detect_combinational_loops<'a>(
-    m: &graph::Module<'a>,
-    root: &graph::Module<'a>,
-) {
+fn detect_combinational_loops<'a>(m: &graph::Module<'a>, root: &graph::Module<'a>) {
     for module in m.modules.borrow().iter() {
         for (_, output) in module.outputs.borrow().iter() {
             trace_signal(output.data.source, output.data.source, root);
@@ -104,92 +92,58 @@ fn trace_signal<'a>(
             graph::SignalData::Reg { .. } => (),
 
             graph::SignalData::UnOp { ref source, .. } => {
-                frames.push(Frame {
-                    signal: source,
-                });
+                frames.push(Frame { signal: source });
             }
             graph::SignalData::SimpleBinOp {
                 ref lhs, ref rhs, ..
             } => {
-                frames.push(Frame {
-                    signal: lhs,
-                });
-                frames.push(Frame {
-                    signal: rhs,
-                });
+                frames.push(Frame { signal: lhs });
+                frames.push(Frame { signal: rhs });
             }
             graph::SignalData::AdditiveBinOp {
                 ref lhs, ref rhs, ..
             } => {
-                frames.push(Frame {
-                    signal: lhs,
-                });
-                frames.push(Frame {
-                    signal: rhs,
-                });
+                frames.push(Frame { signal: lhs });
+                frames.push(Frame { signal: rhs });
             }
             graph::SignalData::ComparisonBinOp {
                 ref lhs, ref rhs, ..
             } => {
-                frames.push(Frame {
-                    signal: lhs,
-                });
-                frames.push(Frame {
-                    signal: rhs,
-                });
+                frames.push(Frame { signal: lhs });
+                frames.push(Frame { signal: rhs });
             }
             graph::SignalData::ShiftBinOp {
                 ref lhs, ref rhs, ..
             } => {
-                frames.push(Frame {
-                    signal: lhs,
-                });
-                frames.push(Frame {
-                    signal: rhs,
-                });
+                frames.push(Frame { signal: lhs });
+                frames.push(Frame { signal: rhs });
             }
 
             graph::SignalData::Mul {
                 ref lhs, ref rhs, ..
             } => {
-                frames.push(Frame {
-                    signal: lhs,
-                });
-                frames.push(Frame {
-                    signal: rhs,
-                });
+                frames.push(Frame { signal: lhs });
+                frames.push(Frame { signal: rhs });
             }
             graph::SignalData::MulSigned {
                 ref lhs, ref rhs, ..
             } => {
-                frames.push(Frame {
-                    signal: lhs,
-                });
-                frames.push(Frame {
-                    signal: rhs,
-                });
+                frames.push(Frame { signal: lhs });
+                frames.push(Frame { signal: rhs });
             }
 
             graph::SignalData::Bits { ref source, .. } => {
-                frames.push(Frame {
-                    signal: source,
-                });
+                frames.push(Frame { signal: source });
             }
 
             graph::SignalData::Repeat { ref source, .. } => {
-                frames.push(Frame {
-                    signal: source,
-                });
+                frames.push(Frame { signal: source });
             }
             graph::SignalData::Concat {
                 ref lhs, ref rhs, ..
             } => {
-                frames.push(Frame {
-                    signal: lhs,
-                });
-                frames.push(Frame {
-                    signal: rhs,
-                });
+                frames.push(Frame { signal: lhs });
+                frames.push(Frame { signal: rhs });
             }
 
             graph::SignalData::Mux {
@@ -198,15 +152,9 @@ fn trace_signal<'a>(
                 ref when_false,
                 ..
             } => {
-                frames.push(Frame {
-                    signal: cond,
-                });
-                frames.push(Frame {
-                    signal: when_true,
-                });
-                frames.push(Frame {
-                    signal: when_false,
-                });
+                frames.push(Frame { signal: cond });
+                frames.push(Frame { signal: when_true });
+                frames.push(Frame { signal: when_false });
             }
 
             graph::SignalData::MemReadPortOutput { .. } => (),

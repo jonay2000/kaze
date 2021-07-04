@@ -872,7 +872,11 @@ pub trait SignalOps<'a>: Into<&'a Signal<'a>> {
     /// m.output("my_output", cond.mux(a, b)); // Outputs a when cond is high, b otherwise
     /// ```
     // TODO: This is currently only used to support sugar; if it doesn't work out, remove this
-    fn mux<S1: Into<&'a Signal<'a>>, S2: Into<&'a Signal<'a>>>(self, when_true: S1, when_false: S2) -> &'a Signal<'a> {
+    fn mux<S1: Into<&'a Signal<'a>>, S2: Into<&'a Signal<'a>>>(
+        self,
+        when_true: S1,
+        when_false: S2,
+    ) -> &'a Signal<'a> {
         let s: &'a Signal<'a> = self.into();
         s.module.mux(s, when_true, when_false)
     }
@@ -937,8 +941,7 @@ pub trait SignalOps<'a>: Into<&'a Signal<'a>> {
     }
 }
 
-impl<'a> SignalOps<'a> for &'a Signal<'a> {
-}
+impl<'a> SignalOps<'a> for &'a Signal<'a> {}
 
 pub(crate) enum SignalData<'a> {
     Lit {

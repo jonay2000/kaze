@@ -99,96 +99,62 @@ impl<'graph, 'context, 'expr_arena> Compiler<'graph, 'context, 'expr_arena> {
 
                         graph::SignalData::UnOp { source, .. } => {
                             frames.push(Frame::Leave { signal });
-                            frames.push(Frame::Enter {
-                                signal: source,
-                            });
+                            frames.push(Frame::Enter { signal: source });
                             None
                         }
                         graph::SignalData::SimpleBinOp { lhs, rhs, .. } => {
                             frames.push(Frame::Leave { signal });
-                            frames.push(Frame::Enter {
-                                signal: lhs,
-                            });
-                            frames.push(Frame::Enter {
-                                signal: rhs,
-                            });
+                            frames.push(Frame::Enter { signal: lhs });
+                            frames.push(Frame::Enter { signal: rhs });
                             None
                         }
                         graph::SignalData::AdditiveBinOp { lhs, rhs, .. } => {
                             frames.push(Frame::Leave { signal });
-                            frames.push(Frame::Enter {
-                                signal: lhs,
-                            });
-                            frames.push(Frame::Enter {
-                                signal: rhs,
-                            });
+                            frames.push(Frame::Enter { signal: lhs });
+                            frames.push(Frame::Enter { signal: rhs });
                             None
                         }
                         graph::SignalData::ComparisonBinOp { lhs, rhs, .. } => {
                             frames.push(Frame::Leave { signal });
-                            frames.push(Frame::Enter {
-                                signal: lhs,
-                            });
-                            frames.push(Frame::Enter {
-                                signal: rhs,
-                            });
+                            frames.push(Frame::Enter { signal: lhs });
+                            frames.push(Frame::Enter { signal: rhs });
                             None
                         }
                         graph::SignalData::ShiftBinOp { lhs, rhs, .. } => {
                             frames.push(Frame::Leave { signal });
-                            frames.push(Frame::Enter {
-                                signal: lhs,
-                            });
-                            frames.push(Frame::Enter {
-                                signal: rhs,
-                            });
+                            frames.push(Frame::Enter { signal: lhs });
+                            frames.push(Frame::Enter { signal: rhs });
                             None
                         }
 
                         graph::SignalData::Mul { lhs, rhs, .. } => {
                             frames.push(Frame::Leave { signal });
-                            frames.push(Frame::Enter {
-                                signal: lhs,
-                            });
-                            frames.push(Frame::Enter {
-                                signal: rhs,
-                            });
+                            frames.push(Frame::Enter { signal: lhs });
+                            frames.push(Frame::Enter { signal: rhs });
                             None
                         }
                         graph::SignalData::MulSigned { lhs, rhs, .. } => {
                             frames.push(Frame::Leave { signal });
-                            frames.push(Frame::Enter {
-                                signal: lhs,
-                            });
-                            frames.push(Frame::Enter {
-                                signal: rhs,
-                            });
+                            frames.push(Frame::Enter { signal: lhs });
+                            frames.push(Frame::Enter { signal: rhs });
                             None
                         }
 
                         graph::SignalData::Bits { source, .. } => {
                             frames.push(Frame::Leave { signal });
-                            frames.push(Frame::Enter {
-                                signal: source,
-                            });
+                            frames.push(Frame::Enter { signal: source });
                             None
                         }
 
                         graph::SignalData::Repeat { source, .. } => {
                             frames.push(Frame::Leave { signal });
-                            frames.push(Frame::Enter {
-                                signal: source,
-                            });
+                            frames.push(Frame::Enter { signal: source });
                             None
                         }
                         graph::SignalData::Concat { lhs, rhs, .. } => {
                             frames.push(Frame::Leave { signal });
-                            frames.push(Frame::Enter {
-                                signal: lhs,
-                            });
-                            frames.push(Frame::Enter {
-                                signal: rhs,
-                            });
+                            frames.push(Frame::Enter { signal: lhs });
+                            frames.push(Frame::Enter { signal: rhs });
                             None
                         }
 
@@ -199,15 +165,9 @@ impl<'graph, 'context, 'expr_arena> Compiler<'graph, 'context, 'expr_arena> {
                             ..
                         } => {
                             frames.push(Frame::Leave { signal });
-                            frames.push(Frame::Enter {
-                                signal: cond,
-                            });
-                            frames.push(Frame::Enter {
-                                signal: when_true,
-                            });
-                            frames.push(Frame::Enter {
-                                signal: when_false,
-                            });
+                            frames.push(Frame::Enter { signal: cond });
+                            frames.push(Frame::Enter { signal: when_true });
+                            frames.push(Frame::Enter { signal: when_false });
                             None
                         }
 

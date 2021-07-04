@@ -41,7 +41,8 @@ pub trait ModuleParent<'a> {
     ///
     /// let _ = c.module("a", "A"); // Non-unique name, panic!
     /// ```
-    fn module<S1: Into<String>, S2: Into<String>>(&'a self, instance_name: S1, name: S2) -> &Module;
+    fn module<S1: Into<String>, S2: Into<String>>(&'a self, instance_name: S1, name: S2)
+        -> &Module;
 }
 
 /// A top-level container/owner object for a [`Module`] graph.
@@ -102,10 +103,16 @@ impl<'a> Context<'a> {
 
 impl<'a> ModuleParent<'a> for Context<'a> {
     // TODO: Docs, error handling
-    fn module<S1: Into<String>, S2: Into<String>>(&'a self, instance_name: S1, name: S2) -> &Module {
+    fn module<S1: Into<String>, S2: Into<String>>(
+        &'a self,
+        instance_name: S1,
+        name: S2,
+    ) -> &Module {
         let instance_name = instance_name.into();
         let name = name.into();
-        let module = self.module_arena.alloc(Module::new(self, None, instance_name, name));
+        let module = self
+            .module_arena
+            .alloc(Module::new(self, None, instance_name, name));
         self.modules.borrow_mut().push(module);
         module
     }

@@ -46,7 +46,12 @@ pub struct Module<'a> {
 }
 
 impl<'a> Module<'a> {
-    pub(super) fn new(context: &'a Context<'a>, parent: Option<&'a Module<'a>>, instance_name: String, name: String) -> Module<'a> {
+    pub(super) fn new(
+        context: &'a Context<'a>,
+        parent: Option<&'a Module<'a>>,
+        instance_name: String,
+        name: String,
+    ) -> Module<'a> {
         Module {
             context,
 
@@ -190,9 +195,7 @@ impl<'a> Module<'a> {
             context: self.context,
             module: self,
 
-            data: SignalData::Input {
-                data,
-            },
+            data: SignalData::Input { data },
         });
         let input = self.context.input_arena.alloc(Input {
             module: self,
@@ -222,7 +225,11 @@ impl<'a> Module<'a> {
     /// let some_signal = m.high();
     /// m.output("my_output", some_signal);
     /// ```
-    pub fn output<S1: Into<String>, S2: Into<&'a Signal<'a>>>(&'a self, name: S1, source: S2) -> &Output<'a> {
+    pub fn output<S1: Into<String>, S2: Into<&'a Signal<'a>>>(
+        &'a self,
+        name: S1,
+        source: S2,
+    ) -> &Output<'a> {
         let name = name.into();
         let source = source.into();
         if !ptr::eq(self, source.module) {
@@ -236,9 +243,7 @@ impl<'a> Module<'a> {
             source,
             bit_width: source.bit_width(),
         });
-        let output = self.context.output_arena.alloc(Output {
-            data,
-        });
+        let output = self.context.output_arena.alloc(Output { data });
         self.outputs.borrow_mut().insert(name, output);
         output
     }
@@ -436,10 +441,19 @@ impl<'a> Module<'a> {
 
 impl<'a> ModuleParent<'a> for Module<'a> {
     // TODO: Docs, error handling
-    fn module<S1: Into<String>, S2: Into<String>>(&'a self, instance_name: S1, name: S2) -> &Module {
+    fn module<S1: Into<String>, S2: Into<String>>(
+        &'a self,
+        instance_name: S1,
+        name: S2,
+    ) -> &Module {
         let instance_name = instance_name.into();
         let name = name.into();
-        let module = self.context.module_arena.alloc(Module::new(self.context, Some(self), instance_name, name));
+        let module = self.context.module_arena.alloc(Module::new(
+            self.context,
+            Some(self),
+            instance_name,
+            name,
+        ));
         self.modules.borrow_mut().push(module);
         module
     }
@@ -511,9 +525,7 @@ impl<'a> From<&'a Output<'a>> for &'a Signal<'a> {
             context: o.data.module.context,
             module: parent,
 
-            data: SignalData::Output {
-                data: o.data,
-            },
+            data: SignalData::Output { data: o.data },
         })
     }
 }
@@ -620,14 +632,11 @@ macro_rules! op_impl {
 // TODO: Use this macro for all of the ops on Signal too? Or keep this duplication?
 op_impl! { Input Output Register }
 
-impl<'a> SignalOps<'a> for &'a Input<'a> {
-}
+impl<'a> SignalOps<'a> for &'a Input<'a> {}
 
-impl<'a> SignalOps<'a> for &'a Output<'a> {
-}
+impl<'a> SignalOps<'a> for &'a Output<'a> {}
 
-impl<'a> SignalOps<'a> for &'a Register<'a> {
-}
+impl<'a> SignalOps<'a> for &'a Register<'a> {}
 
 pub(crate) struct InputData<'a> {
     // TODO: Do we need this stored here too?

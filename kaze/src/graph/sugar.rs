@@ -50,59 +50,54 @@ impl<'a, T> If<'a, T> {
     }
 }
 
-impl<'a> If<'a, &'a Signal<'a>> {
+// TODO: Use more S's or are R's OK here? I don't like it either way..
+impl<'a, R: Into<&'a Signal<'a>>> If<'a, R> {
     pub fn else_<S: Into<&'a Signal<'a>>>(self, when_false: S) -> &'a Signal<'a> {
-        let when_false = when_false.into();
         self.cond.mux(self.when_true, when_false)
     }
 }
 
 // TODO: Come up with a nice way to generate these definitions with macros
-impl<'a> If<'a, (&'a Signal<'a>,)> {
+impl<'a, R: Into<&'a Signal<'a>>> If<'a, (R,)> {
     pub fn else_<S: Into<&'a Signal<'a>>>(self, when_false: (S,)) -> (&'a Signal<'a>,) {
-        (self.cond.mux(self.when_true.0, when_false.0.into()),)
+        (self.cond.mux(self.when_true.0, when_false.0),)
     }
 }
 
-impl<'a> If<'a, (&'a Signal<'a>, &'a Signal<'a>)> {
-    pub fn else_<
-        S1: Into<&'a Signal<'a>>,
-        S2: Into<&'a Signal<'a>>,
-    >(self, when_false: (S1, S2)) -> (&'a Signal<'a>, &'a Signal<'a>) {
+impl<'a, R1: Into<&'a Signal<'a>>, R2: Into<&'a Signal<'a>>> If<'a, (R1, R2)> {
+    pub fn else_<S1: Into<&'a Signal<'a>>, S2: Into<&'a Signal<'a>>>(
+        self,
+        when_false: (S1, S2),
+    ) -> (&'a Signal<'a>, &'a Signal<'a>) {
         (
-            self.cond.mux(self.when_true.0, when_false.0.into()),
-            self.cond.mux(self.when_true.1, when_false.1.into()),
+            self.cond.mux(self.when_true.0, when_false.0),
+            self.cond.mux(self.when_true.1, when_false.1),
         )
     }
 }
 
-impl<'a> If<'a, (&'a Signal<'a>, &'a Signal<'a>, &'a Signal<'a>)> {
-    pub fn else_<
-        S1: Into<&'a Signal<'a>>,
-        S2: Into<&'a Signal<'a>>,
-        S3: Into<&'a Signal<'a>>,
-    >(
+impl<'a, R1: Into<&'a Signal<'a>>, R2: Into<&'a Signal<'a>>, R3: Into<&'a Signal<'a>>>
+    If<'a, (R1, R2, R3)>
+{
+    pub fn else_<S1: Into<&'a Signal<'a>>, S2: Into<&'a Signal<'a>>, S3: Into<&'a Signal<'a>>>(
         self,
         when_false: (S1, S2, S3),
     ) -> (&'a Signal<'a>, &'a Signal<'a>, &'a Signal<'a>) {
         (
-            self.cond.mux(self.when_true.0, when_false.0.into()),
-            self.cond.mux(self.when_true.1, when_false.1.into()),
-            self.cond.mux(self.when_true.2, when_false.2.into()),
+            self.cond.mux(self.when_true.0, when_false.0),
+            self.cond.mux(self.when_true.1, when_false.1),
+            self.cond.mux(self.when_true.2, when_false.2),
         )
     }
 }
 
-impl<'a>
-    If<
+impl<
         'a,
-        (
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-        ),
-    >
+        R1: Into<&'a Signal<'a>>,
+        R2: Into<&'a Signal<'a>>,
+        R3: Into<&'a Signal<'a>>,
+        R4: Into<&'a Signal<'a>>,
+    > If<'a, (R1, R2, R3, R4)>
 {
     pub fn else_<
         S1: Into<&'a Signal<'a>>,
@@ -111,33 +106,30 @@ impl<'a>
         S4: Into<&'a Signal<'a>>,
     >(
         self,
-        when_false: (
-            S1,
-            S2,
-            S3,
-            S4,
-        ),
-    ) -> (&'a Signal<'a>, &'a Signal<'a>, &'a Signal<'a>, &'a Signal<'a>) {
+        when_false: (S1, S2, S3, S4),
+    ) -> (
+        &'a Signal<'a>,
+        &'a Signal<'a>,
+        &'a Signal<'a>,
+        &'a Signal<'a>,
+    ) {
         (
-            self.cond.mux(self.when_true.0, when_false.0.into()),
-            self.cond.mux(self.when_true.1, when_false.1.into()),
-            self.cond.mux(self.when_true.2, when_false.2.into()),
-            self.cond.mux(self.when_true.3, when_false.3.into()),
+            self.cond.mux(self.when_true.0, when_false.0),
+            self.cond.mux(self.when_true.1, when_false.1),
+            self.cond.mux(self.when_true.2, when_false.2),
+            self.cond.mux(self.when_true.3, when_false.3),
         )
     }
 }
 
-impl<'a>
-    If<
+impl<
         'a,
-        (
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-        ),
-    >
+        R1: Into<&'a Signal<'a>>,
+        R2: Into<&'a Signal<'a>>,
+        R3: Into<&'a Signal<'a>>,
+        R4: Into<&'a Signal<'a>>,
+        R5: Into<&'a Signal<'a>>,
+    > If<'a, (R1, R2, R3, R4, R5)>
 {
     pub fn else_<
         S1: Into<&'a Signal<'a>>,
@@ -147,13 +139,7 @@ impl<'a>
         S5: Into<&'a Signal<'a>>,
     >(
         self,
-        when_false: (
-            S1,
-            S2,
-            S3,
-            S4,
-            S5,
-        ),
+        when_false: (S1, S2, S3, S4, S5),
     ) -> (
         &'a Signal<'a>,
         &'a Signal<'a>,
@@ -162,27 +148,24 @@ impl<'a>
         &'a Signal<'a>,
     ) {
         (
-            self.cond.mux(self.when_true.0, when_false.0.into()),
-            self.cond.mux(self.when_true.1, when_false.1.into()),
-            self.cond.mux(self.when_true.2, when_false.2.into()),
-            self.cond.mux(self.when_true.3, when_false.3.into()),
-            self.cond.mux(self.when_true.4, when_false.4.into()),
+            self.cond.mux(self.when_true.0, when_false.0),
+            self.cond.mux(self.when_true.1, when_false.1),
+            self.cond.mux(self.when_true.2, when_false.2),
+            self.cond.mux(self.when_true.3, when_false.3),
+            self.cond.mux(self.when_true.4, when_false.4),
         )
     }
 }
 
-impl<'a>
-    If<
+impl<
         'a,
-        (
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-        ),
-    >
+        R1: Into<&'a Signal<'a>>,
+        R2: Into<&'a Signal<'a>>,
+        R3: Into<&'a Signal<'a>>,
+        R4: Into<&'a Signal<'a>>,
+        R5: Into<&'a Signal<'a>>,
+        R6: Into<&'a Signal<'a>>,
+    > If<'a, (R1, R2, R3, R4, R5, R6)>
 {
     pub fn else_<
         S1: Into<&'a Signal<'a>>,
@@ -193,14 +176,7 @@ impl<'a>
         S6: Into<&'a Signal<'a>>,
     >(
         self,
-        when_false: (
-            S1,
-            S2,
-            S3,
-            S4,
-            S5,
-            S6,
-        ),
+        when_false: (S1, S2, S3, S4, S5, S6),
     ) -> (
         &'a Signal<'a>,
         &'a Signal<'a>,
@@ -210,29 +186,26 @@ impl<'a>
         &'a Signal<'a>,
     ) {
         (
-            self.cond.mux(self.when_true.0, when_false.0.into()),
-            self.cond.mux(self.when_true.1, when_false.1.into()),
-            self.cond.mux(self.when_true.2, when_false.2.into()),
-            self.cond.mux(self.when_true.3, when_false.3.into()),
-            self.cond.mux(self.when_true.4, when_false.4.into()),
-            self.cond.mux(self.when_true.5, when_false.5.into()),
+            self.cond.mux(self.when_true.0, when_false.0),
+            self.cond.mux(self.when_true.1, when_false.1),
+            self.cond.mux(self.when_true.2, when_false.2),
+            self.cond.mux(self.when_true.3, when_false.3),
+            self.cond.mux(self.when_true.4, when_false.4),
+            self.cond.mux(self.when_true.5, when_false.5),
         )
     }
 }
 
-impl<'a>
-    If<
+impl<
         'a,
-        (
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-        ),
-    >
+        R1: Into<&'a Signal<'a>>,
+        R2: Into<&'a Signal<'a>>,
+        R3: Into<&'a Signal<'a>>,
+        R4: Into<&'a Signal<'a>>,
+        R5: Into<&'a Signal<'a>>,
+        R6: Into<&'a Signal<'a>>,
+        R7: Into<&'a Signal<'a>>,
+    > If<'a, (R1, R2, R3, R4, R5, R6, R7)>
 {
     pub fn else_<
         S1: Into<&'a Signal<'a>>,
@@ -244,15 +217,7 @@ impl<'a>
         S7: Into<&'a Signal<'a>>,
     >(
         self,
-        when_false: (
-            S1,
-            S2,
-            S3,
-            S4,
-            S5,
-            S6,
-            S7,
-        ),
+        when_false: (S1, S2, S3, S4, S5, S6, S7),
     ) -> (
         &'a Signal<'a>,
         &'a Signal<'a>,
@@ -263,31 +228,28 @@ impl<'a>
         &'a Signal<'a>,
     ) {
         (
-            self.cond.mux(self.when_true.0, when_false.0.into()),
-            self.cond.mux(self.when_true.1, when_false.1.into()),
-            self.cond.mux(self.when_true.2, when_false.2.into()),
-            self.cond.mux(self.when_true.3, when_false.3.into()),
-            self.cond.mux(self.when_true.4, when_false.4.into()),
-            self.cond.mux(self.when_true.5, when_false.5.into()),
-            self.cond.mux(self.when_true.6, when_false.6.into()),
+            self.cond.mux(self.when_true.0, when_false.0),
+            self.cond.mux(self.when_true.1, when_false.1),
+            self.cond.mux(self.when_true.2, when_false.2),
+            self.cond.mux(self.when_true.3, when_false.3),
+            self.cond.mux(self.when_true.4, when_false.4),
+            self.cond.mux(self.when_true.5, when_false.5),
+            self.cond.mux(self.when_true.6, when_false.6),
         )
     }
 }
 
-impl<'a>
-    If<
+impl<
         'a,
-        (
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-        ),
-    >
+        R1: Into<&'a Signal<'a>>,
+        R2: Into<&'a Signal<'a>>,
+        R3: Into<&'a Signal<'a>>,
+        R4: Into<&'a Signal<'a>>,
+        R5: Into<&'a Signal<'a>>,
+        R6: Into<&'a Signal<'a>>,
+        R7: Into<&'a Signal<'a>>,
+        R8: Into<&'a Signal<'a>>,
+    > If<'a, (R1, R2, R3, R4, R5, R6, R7, R8)>
 {
     pub fn else_<
         S1: Into<&'a Signal<'a>>,
@@ -300,16 +262,7 @@ impl<'a>
         S8: Into<&'a Signal<'a>>,
     >(
         self,
-        when_false: (
-            S1,
-            S2,
-            S3,
-            S4,
-            S5,
-            S6,
-            S7,
-            S8,
-        ),
+        when_false: (S1, S2, S3, S4, S5, S6, S7, S8),
     ) -> (
         &'a Signal<'a>,
         &'a Signal<'a>,
@@ -321,33 +274,30 @@ impl<'a>
         &'a Signal<'a>,
     ) {
         (
-            self.cond.mux(self.when_true.0, when_false.0.into()),
-            self.cond.mux(self.when_true.1, when_false.1.into()),
-            self.cond.mux(self.when_true.2, when_false.2.into()),
-            self.cond.mux(self.when_true.3, when_false.3.into()),
-            self.cond.mux(self.when_true.4, when_false.4.into()),
-            self.cond.mux(self.when_true.5, when_false.5.into()),
-            self.cond.mux(self.when_true.6, when_false.6.into()),
-            self.cond.mux(self.when_true.7, when_false.7.into()),
+            self.cond.mux(self.when_true.0, when_false.0),
+            self.cond.mux(self.when_true.1, when_false.1),
+            self.cond.mux(self.when_true.2, when_false.2),
+            self.cond.mux(self.when_true.3, when_false.3),
+            self.cond.mux(self.when_true.4, when_false.4),
+            self.cond.mux(self.when_true.5, when_false.5),
+            self.cond.mux(self.when_true.6, when_false.6),
+            self.cond.mux(self.when_true.7, when_false.7),
         )
     }
 }
 
-impl<'a>
-    If<
+impl<
         'a,
-        (
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-        ),
-    >
+        R1: Into<&'a Signal<'a>>,
+        R2: Into<&'a Signal<'a>>,
+        R3: Into<&'a Signal<'a>>,
+        R4: Into<&'a Signal<'a>>,
+        R5: Into<&'a Signal<'a>>,
+        R6: Into<&'a Signal<'a>>,
+        R7: Into<&'a Signal<'a>>,
+        R8: Into<&'a Signal<'a>>,
+        R9: Into<&'a Signal<'a>>,
+    > If<'a, (R1, R2, R3, R4, R5, R6, R7, R8, R9)>
 {
     pub fn else_<
         S1: Into<&'a Signal<'a>>,
@@ -361,17 +311,7 @@ impl<'a>
         S9: Into<&'a Signal<'a>>,
     >(
         self,
-        when_false: (
-            S1,
-            S2,
-            S3,
-            S4,
-            S5,
-            S6,
-            S7,
-            S8,
-            S9,
-        ),
+        when_false: (S1, S2, S3, S4, S5, S6, S7, S8, S9),
     ) -> (
         &'a Signal<'a>,
         &'a Signal<'a>,
@@ -384,35 +324,32 @@ impl<'a>
         &'a Signal<'a>,
     ) {
         (
-            self.cond.mux(self.when_true.0, when_false.0.into()),
-            self.cond.mux(self.when_true.1, when_false.1.into()),
-            self.cond.mux(self.when_true.2, when_false.2.into()),
-            self.cond.mux(self.when_true.3, when_false.3.into()),
-            self.cond.mux(self.when_true.4, when_false.4.into()),
-            self.cond.mux(self.when_true.5, when_false.5.into()),
-            self.cond.mux(self.when_true.6, when_false.6.into()),
-            self.cond.mux(self.when_true.7, when_false.7.into()),
-            self.cond.mux(self.when_true.8, when_false.8.into()),
+            self.cond.mux(self.when_true.0, when_false.0),
+            self.cond.mux(self.when_true.1, when_false.1),
+            self.cond.mux(self.when_true.2, when_false.2),
+            self.cond.mux(self.when_true.3, when_false.3),
+            self.cond.mux(self.when_true.4, when_false.4),
+            self.cond.mux(self.when_true.5, when_false.5),
+            self.cond.mux(self.when_true.6, when_false.6),
+            self.cond.mux(self.when_true.7, when_false.7),
+            self.cond.mux(self.when_true.8, when_false.8),
         )
     }
 }
 
-impl<'a>
-    If<
+impl<
         'a,
-        (
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-        ),
-    >
+        R1: Into<&'a Signal<'a>>,
+        R2: Into<&'a Signal<'a>>,
+        R3: Into<&'a Signal<'a>>,
+        R4: Into<&'a Signal<'a>>,
+        R5: Into<&'a Signal<'a>>,
+        R6: Into<&'a Signal<'a>>,
+        R7: Into<&'a Signal<'a>>,
+        R8: Into<&'a Signal<'a>>,
+        R9: Into<&'a Signal<'a>>,
+        R10: Into<&'a Signal<'a>>,
+    > If<'a, (R1, R2, R3, R4, R5, R6, R7, R8, R9, R10)>
 {
     pub fn else_<
         S1: Into<&'a Signal<'a>>,
@@ -427,18 +364,7 @@ impl<'a>
         S10: Into<&'a Signal<'a>>,
     >(
         self,
-        when_false: (
-            S1,
-            S2,
-            S3,
-            S4,
-            S5,
-            S6,
-            S7,
-            S8,
-            S9,
-            S10,
-        ),
+        when_false: (S1, S2, S3, S4, S5, S6, S7, S8, S9, S10),
     ) -> (
         &'a Signal<'a>,
         &'a Signal<'a>,
@@ -452,37 +378,34 @@ impl<'a>
         &'a Signal<'a>,
     ) {
         (
-            self.cond.mux(self.when_true.0, when_false.0.into()),
-            self.cond.mux(self.when_true.1, when_false.1.into()),
-            self.cond.mux(self.when_true.2, when_false.2.into()),
-            self.cond.mux(self.when_true.3, when_false.3.into()),
-            self.cond.mux(self.when_true.4, when_false.4.into()),
-            self.cond.mux(self.when_true.5, when_false.5.into()),
-            self.cond.mux(self.when_true.6, when_false.6.into()),
-            self.cond.mux(self.when_true.7, when_false.7.into()),
-            self.cond.mux(self.when_true.8, when_false.8.into()),
-            self.cond.mux(self.when_true.9, when_false.9.into()),
+            self.cond.mux(self.when_true.0, when_false.0),
+            self.cond.mux(self.when_true.1, when_false.1),
+            self.cond.mux(self.when_true.2, when_false.2),
+            self.cond.mux(self.when_true.3, when_false.3),
+            self.cond.mux(self.when_true.4, when_false.4),
+            self.cond.mux(self.when_true.5, when_false.5),
+            self.cond.mux(self.when_true.6, when_false.6),
+            self.cond.mux(self.when_true.7, when_false.7),
+            self.cond.mux(self.when_true.8, when_false.8),
+            self.cond.mux(self.when_true.9, when_false.9),
         )
     }
 }
 
-impl<'a>
-    If<
+impl<
         'a,
-        (
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-        ),
-    >
+        R1: Into<&'a Signal<'a>>,
+        R2: Into<&'a Signal<'a>>,
+        R3: Into<&'a Signal<'a>>,
+        R4: Into<&'a Signal<'a>>,
+        R5: Into<&'a Signal<'a>>,
+        R6: Into<&'a Signal<'a>>,
+        R7: Into<&'a Signal<'a>>,
+        R8: Into<&'a Signal<'a>>,
+        R9: Into<&'a Signal<'a>>,
+        R10: Into<&'a Signal<'a>>,
+        R11: Into<&'a Signal<'a>>,
+    > If<'a, (R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11)>
 {
     pub fn else_<
         S1: Into<&'a Signal<'a>>,
@@ -498,19 +421,7 @@ impl<'a>
         S11: Into<&'a Signal<'a>>,
     >(
         self,
-        when_false: (
-            S1,
-            S2,
-            S3,
-            S4,
-            S5,
-            S6,
-            S7,
-            S8,
-            S9,
-            S10,
-            S11,
-        ),
+        when_false: (S1, S2, S3, S4, S5, S6, S7, S8, S9, S10, S11),
     ) -> (
         &'a Signal<'a>,
         &'a Signal<'a>,
@@ -525,39 +436,36 @@ impl<'a>
         &'a Signal<'a>,
     ) {
         (
-            self.cond.mux(self.when_true.0, when_false.0.into()),
-            self.cond.mux(self.when_true.1, when_false.1.into()),
-            self.cond.mux(self.when_true.2, when_false.2.into()),
-            self.cond.mux(self.when_true.3, when_false.3.into()),
-            self.cond.mux(self.when_true.4, when_false.4.into()),
-            self.cond.mux(self.when_true.5, when_false.5.into()),
-            self.cond.mux(self.when_true.6, when_false.6.into()),
-            self.cond.mux(self.when_true.7, when_false.7.into()),
-            self.cond.mux(self.when_true.8, when_false.8.into()),
-            self.cond.mux(self.when_true.9, when_false.9.into()),
-            self.cond.mux(self.when_true.10, when_false.10.into()),
+            self.cond.mux(self.when_true.0, when_false.0),
+            self.cond.mux(self.when_true.1, when_false.1),
+            self.cond.mux(self.when_true.2, when_false.2),
+            self.cond.mux(self.when_true.3, when_false.3),
+            self.cond.mux(self.when_true.4, when_false.4),
+            self.cond.mux(self.when_true.5, when_false.5),
+            self.cond.mux(self.when_true.6, when_false.6),
+            self.cond.mux(self.when_true.7, when_false.7),
+            self.cond.mux(self.when_true.8, when_false.8),
+            self.cond.mux(self.when_true.9, when_false.9),
+            self.cond.mux(self.when_true.10, when_false.10),
         )
     }
 }
 
-impl<'a>
-    If<
+impl<
         'a,
-        (
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-        ),
-    >
+        R1: Into<&'a Signal<'a>>,
+        R2: Into<&'a Signal<'a>>,
+        R3: Into<&'a Signal<'a>>,
+        R4: Into<&'a Signal<'a>>,
+        R5: Into<&'a Signal<'a>>,
+        R6: Into<&'a Signal<'a>>,
+        R7: Into<&'a Signal<'a>>,
+        R8: Into<&'a Signal<'a>>,
+        R9: Into<&'a Signal<'a>>,
+        R10: Into<&'a Signal<'a>>,
+        R11: Into<&'a Signal<'a>>,
+        R12: Into<&'a Signal<'a>>,
+    > If<'a, (R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12)>
 {
     pub fn else_<
         S1: Into<&'a Signal<'a>>,
@@ -574,20 +482,7 @@ impl<'a>
         S12: Into<&'a Signal<'a>>,
     >(
         self,
-        when_false: (
-            S1,
-            S2,
-            S3,
-            S4,
-            S5,
-            S6,
-            S7,
-            S8,
-            S9,
-            S10,
-            S11,
-            S12,
-        ),
+        when_false: (S1, S2, S3, S4, S5, S6, S7, S8, S9, S10, S11, S12),
     ) -> (
         &'a Signal<'a>,
         &'a Signal<'a>,
@@ -603,18 +498,18 @@ impl<'a>
         &'a Signal<'a>,
     ) {
         (
-            self.cond.mux(self.when_true.0, when_false.0.into()),
-            self.cond.mux(self.when_true.1, when_false.1.into()),
-            self.cond.mux(self.when_true.2, when_false.2.into()),
-            self.cond.mux(self.when_true.3, when_false.3.into()),
-            self.cond.mux(self.when_true.4, when_false.4.into()),
-            self.cond.mux(self.when_true.5, when_false.5.into()),
-            self.cond.mux(self.when_true.6, when_false.6.into()),
-            self.cond.mux(self.when_true.7, when_false.7.into()),
-            self.cond.mux(self.when_true.8, when_false.8.into()),
-            self.cond.mux(self.when_true.9, when_false.9.into()),
-            self.cond.mux(self.when_true.10, when_false.10.into()),
-            self.cond.mux(self.when_true.11, when_false.11.into()),
+            self.cond.mux(self.when_true.0, when_false.0),
+            self.cond.mux(self.when_true.1, when_false.1),
+            self.cond.mux(self.when_true.2, when_false.2),
+            self.cond.mux(self.when_true.3, when_false.3),
+            self.cond.mux(self.when_true.4, when_false.4),
+            self.cond.mux(self.when_true.5, when_false.5),
+            self.cond.mux(self.when_true.6, when_false.6),
+            self.cond.mux(self.when_true.7, when_false.7),
+            self.cond.mux(self.when_true.8, when_false.8),
+            self.cond.mux(self.when_true.9, when_false.9),
+            self.cond.mux(self.when_true.10, when_false.10),
+            self.cond.mux(self.when_true.11, when_false.11),
         )
     }
 }
@@ -642,9 +537,8 @@ impl<'a, T> ElseIf<'a, T> {
     }
 }
 
-impl<'a> ElseIf<'a, &'a Signal<'a>> {
+impl<'a, R: Into<&'a Signal<'a>>> ElseIf<'a, R> {
     pub fn else_<S: Into<&'a Signal<'a>>>(self, when_false: S) -> &'a Signal<'a> {
-        let when_false = when_false.into();
         let ret = self.cond.mux(self.when_true, when_false);
         match self.parent {
             ElseIfParent::If(parent) => parent.else_(ret),
@@ -654,9 +548,9 @@ impl<'a> ElseIf<'a, &'a Signal<'a>> {
 }
 
 // TODO: Come up with a nice way to generate these definitions with macros
-impl<'a> ElseIf<'a, (&'a Signal<'a>,)> {
+impl<'a, R: Into<&'a Signal<'a>>> ElseIf<'a, (R,)> {
     pub fn else_<S: Into<&'a Signal<'a>>>(self, when_false: (S,)) -> (&'a Signal<'a>,) {
-        let ret = (self.cond.mux(self.when_true.0, when_false.0.into()),);
+        let ret = (self.cond.mux(self.when_true.0, when_false.0),);
         match self.parent {
             ElseIfParent::If(parent) => parent.else_(ret),
             ElseIfParent::ElseIf(parent) => parent.else_(ret),
@@ -664,11 +558,14 @@ impl<'a> ElseIf<'a, (&'a Signal<'a>,)> {
     }
 }
 
-impl<'a> ElseIf<'a, (&'a Signal<'a>, &'a Signal<'a>)> {
-    pub fn else_<S1: Into<&'a Signal<'a>>, S2: Into<&'a Signal<'a>>>(self, when_false: (S1, S2)) -> (&'a Signal<'a>, &'a Signal<'a>) {
+impl<'a, R1: Into<&'a Signal<'a>>, R2: Into<&'a Signal<'a>>> ElseIf<'a, (R1, R2)> {
+    pub fn else_<S1: Into<&'a Signal<'a>>, S2: Into<&'a Signal<'a>>>(
+        self,
+        when_false: (S1, S2),
+    ) -> (&'a Signal<'a>, &'a Signal<'a>) {
         let ret = (
-            self.cond.mux(self.when_true.0, when_false.0.into()),
-            self.cond.mux(self.when_true.1, when_false.1.into()),
+            self.cond.mux(self.when_true.0, when_false.0),
+            self.cond.mux(self.when_true.1, when_false.1),
         );
         match self.parent {
             ElseIfParent::If(parent) => parent.else_(ret),
@@ -677,19 +574,17 @@ impl<'a> ElseIf<'a, (&'a Signal<'a>, &'a Signal<'a>)> {
     }
 }
 
-impl<'a> ElseIf<'a, (&'a Signal<'a>, &'a Signal<'a>, &'a Signal<'a>)> {
-    pub fn else_<
-        S1: Into<&'a Signal<'a>>,
-        S2: Into<&'a Signal<'a>>,
-        S3: Into<&'a Signal<'a>>,
-    >(
+impl<'a, R1: Into<&'a Signal<'a>>, R2: Into<&'a Signal<'a>>, R3: Into<&'a Signal<'a>>>
+    ElseIf<'a, (R1, R2, R3)>
+{
+    pub fn else_<S1: Into<&'a Signal<'a>>, S2: Into<&'a Signal<'a>>, S3: Into<&'a Signal<'a>>>(
         self,
         when_false: (S1, S2, S3),
     ) -> (&'a Signal<'a>, &'a Signal<'a>, &'a Signal<'a>) {
         let ret = (
-            self.cond.mux(self.when_true.0, when_false.0.into()),
-            self.cond.mux(self.when_true.1, when_false.1.into()),
-            self.cond.mux(self.when_true.2, when_false.2.into()),
+            self.cond.mux(self.when_true.0, when_false.0),
+            self.cond.mux(self.when_true.1, when_false.1),
+            self.cond.mux(self.when_true.2, when_false.2),
         );
         match self.parent {
             ElseIfParent::If(parent) => parent.else_(ret),
@@ -698,16 +593,13 @@ impl<'a> ElseIf<'a, (&'a Signal<'a>, &'a Signal<'a>, &'a Signal<'a>)> {
     }
 }
 
-impl<'a>
-    ElseIf<
+impl<
         'a,
-        (
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-        ),
-    >
+        R1: Into<&'a Signal<'a>>,
+        R2: Into<&'a Signal<'a>>,
+        R3: Into<&'a Signal<'a>>,
+        R4: Into<&'a Signal<'a>>,
+    > ElseIf<'a, (R1, R2, R3, R4)>
 {
     pub fn else_<
         S1: Into<&'a Signal<'a>>,
@@ -716,18 +608,18 @@ impl<'a>
         S4: Into<&'a Signal<'a>>,
     >(
         self,
-        when_false: (
-            S1,
-            S2,
-            S3,
-            S4,
-        ),
-    ) -> (&'a Signal<'a>, &'a Signal<'a>, &'a Signal<'a>, &'a Signal<'a>) {
+        when_false: (S1, S2, S3, S4),
+    ) -> (
+        &'a Signal<'a>,
+        &'a Signal<'a>,
+        &'a Signal<'a>,
+        &'a Signal<'a>,
+    ) {
         let ret = (
-            self.cond.mux(self.when_true.0, when_false.0.into()),
-            self.cond.mux(self.when_true.1, when_false.1.into()),
-            self.cond.mux(self.when_true.2, when_false.2.into()),
-            self.cond.mux(self.when_true.3, when_false.3.into()),
+            self.cond.mux(self.when_true.0, when_false.0),
+            self.cond.mux(self.when_true.1, when_false.1),
+            self.cond.mux(self.when_true.2, when_false.2),
+            self.cond.mux(self.when_true.3, when_false.3),
         );
         match self.parent {
             ElseIfParent::If(parent) => parent.else_(ret),
@@ -736,17 +628,14 @@ impl<'a>
     }
 }
 
-impl<'a>
-    ElseIf<
+impl<
         'a,
-        (
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-        ),
-    >
+        R1: Into<&'a Signal<'a>>,
+        R2: Into<&'a Signal<'a>>,
+        R3: Into<&'a Signal<'a>>,
+        R4: Into<&'a Signal<'a>>,
+        R5: Into<&'a Signal<'a>>,
+    > ElseIf<'a, (R1, R2, R3, R4, R5)>
 {
     pub fn else_<
         S1: Into<&'a Signal<'a>>,
@@ -756,13 +645,7 @@ impl<'a>
         S5: Into<&'a Signal<'a>>,
     >(
         self,
-        when_false: (
-            S1,
-            S2,
-            S3,
-            S4,
-            S5,
-        ),
+        when_false: (S1, S2, S3, S4, S5),
     ) -> (
         &'a Signal<'a>,
         &'a Signal<'a>,
@@ -771,11 +654,11 @@ impl<'a>
         &'a Signal<'a>,
     ) {
         let ret = (
-            self.cond.mux(self.when_true.0, when_false.0.into()),
-            self.cond.mux(self.when_true.1, when_false.1.into()),
-            self.cond.mux(self.when_true.2, when_false.2.into()),
-            self.cond.mux(self.when_true.3, when_false.3.into()),
-            self.cond.mux(self.when_true.4, when_false.4.into()),
+            self.cond.mux(self.when_true.0, when_false.0),
+            self.cond.mux(self.when_true.1, when_false.1),
+            self.cond.mux(self.when_true.2, when_false.2),
+            self.cond.mux(self.when_true.3, when_false.3),
+            self.cond.mux(self.when_true.4, when_false.4),
         );
         match self.parent {
             ElseIfParent::If(parent) => parent.else_(ret),
@@ -784,18 +667,15 @@ impl<'a>
     }
 }
 
-impl<'a>
-    ElseIf<
+impl<
         'a,
-        (
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-        ),
-    >
+        R1: Into<&'a Signal<'a>>,
+        R2: Into<&'a Signal<'a>>,
+        R3: Into<&'a Signal<'a>>,
+        R4: Into<&'a Signal<'a>>,
+        R5: Into<&'a Signal<'a>>,
+        R6: Into<&'a Signal<'a>>,
+    > ElseIf<'a, (R1, R2, R3, R4, R5, R6)>
 {
     pub fn else_<
         S1: Into<&'a Signal<'a>>,
@@ -806,14 +686,7 @@ impl<'a>
         S6: Into<&'a Signal<'a>>,
     >(
         self,
-        when_false: (
-            S1,
-            S2,
-            S3,
-            S4,
-            S5,
-            S6,
-        ),
+        when_false: (S1, S2, S3, S4, S5, S6),
     ) -> (
         &'a Signal<'a>,
         &'a Signal<'a>,
@@ -823,12 +696,12 @@ impl<'a>
         &'a Signal<'a>,
     ) {
         let ret = (
-            self.cond.mux(self.when_true.0, when_false.0.into()),
-            self.cond.mux(self.when_true.1, when_false.1.into()),
-            self.cond.mux(self.when_true.2, when_false.2.into()),
-            self.cond.mux(self.when_true.3, when_false.3.into()),
-            self.cond.mux(self.when_true.4, when_false.4.into()),
-            self.cond.mux(self.when_true.5, when_false.5.into()),
+            self.cond.mux(self.when_true.0, when_false.0),
+            self.cond.mux(self.when_true.1, when_false.1),
+            self.cond.mux(self.when_true.2, when_false.2),
+            self.cond.mux(self.when_true.3, when_false.3),
+            self.cond.mux(self.when_true.4, when_false.4),
+            self.cond.mux(self.when_true.5, when_false.5),
         );
         match self.parent {
             ElseIfParent::If(parent) => parent.else_(ret),
@@ -837,19 +710,16 @@ impl<'a>
     }
 }
 
-impl<'a>
-    ElseIf<
+impl<
         'a,
-        (
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-        ),
-    >
+        R1: Into<&'a Signal<'a>>,
+        R2: Into<&'a Signal<'a>>,
+        R3: Into<&'a Signal<'a>>,
+        R4: Into<&'a Signal<'a>>,
+        R5: Into<&'a Signal<'a>>,
+        R6: Into<&'a Signal<'a>>,
+        R7: Into<&'a Signal<'a>>,
+    > ElseIf<'a, (R1, R2, R3, R4, R5, R6, R7)>
 {
     pub fn else_<
         S1: Into<&'a Signal<'a>>,
@@ -861,15 +731,7 @@ impl<'a>
         S7: Into<&'a Signal<'a>>,
     >(
         self,
-        when_false: (
-            S1,
-            S2,
-            S3,
-            S4,
-            S5,
-            S6,
-            S7,
-        ),
+        when_false: (S1, S2, S3, S4, S5, S6, S7),
     ) -> (
         &'a Signal<'a>,
         &'a Signal<'a>,
@@ -880,13 +742,13 @@ impl<'a>
         &'a Signal<'a>,
     ) {
         let ret = (
-            self.cond.mux(self.when_true.0, when_false.0.into()),
-            self.cond.mux(self.when_true.1, when_false.1.into()),
-            self.cond.mux(self.when_true.2, when_false.2.into()),
-            self.cond.mux(self.when_true.3, when_false.3.into()),
-            self.cond.mux(self.when_true.4, when_false.4.into()),
-            self.cond.mux(self.when_true.5, when_false.5.into()),
-            self.cond.mux(self.when_true.6, when_false.6.into()),
+            self.cond.mux(self.when_true.0, when_false.0),
+            self.cond.mux(self.when_true.1, when_false.1),
+            self.cond.mux(self.when_true.2, when_false.2),
+            self.cond.mux(self.when_true.3, when_false.3),
+            self.cond.mux(self.when_true.4, when_false.4),
+            self.cond.mux(self.when_true.5, when_false.5),
+            self.cond.mux(self.when_true.6, when_false.6),
         );
         match self.parent {
             ElseIfParent::If(parent) => parent.else_(ret),
@@ -895,20 +757,17 @@ impl<'a>
     }
 }
 
-impl<'a>
-    ElseIf<
+impl<
         'a,
-        (
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-        ),
-    >
+        R1: Into<&'a Signal<'a>>,
+        R2: Into<&'a Signal<'a>>,
+        R3: Into<&'a Signal<'a>>,
+        R4: Into<&'a Signal<'a>>,
+        R5: Into<&'a Signal<'a>>,
+        R6: Into<&'a Signal<'a>>,
+        R7: Into<&'a Signal<'a>>,
+        R8: Into<&'a Signal<'a>>,
+    > ElseIf<'a, (R1, R2, R3, R4, R5, R6, R7, R8)>
 {
     pub fn else_<
         S1: Into<&'a Signal<'a>>,
@@ -921,16 +780,7 @@ impl<'a>
         S8: Into<&'a Signal<'a>>,
     >(
         self,
-        when_false: (
-            S1,
-            S2,
-            S3,
-            S4,
-            S5,
-            S6,
-            S7,
-            S8,
-        ),
+        when_false: (S1, S2, S3, S4, S5, S6, S7, S8),
     ) -> (
         &'a Signal<'a>,
         &'a Signal<'a>,
@@ -942,14 +792,14 @@ impl<'a>
         &'a Signal<'a>,
     ) {
         let ret = (
-            self.cond.mux(self.when_true.0, when_false.0.into()),
-            self.cond.mux(self.when_true.1, when_false.1.into()),
-            self.cond.mux(self.when_true.2, when_false.2.into()),
-            self.cond.mux(self.when_true.3, when_false.3.into()),
-            self.cond.mux(self.when_true.4, when_false.4.into()),
-            self.cond.mux(self.when_true.5, when_false.5.into()),
-            self.cond.mux(self.when_true.6, when_false.6.into()),
-            self.cond.mux(self.when_true.7, when_false.7.into()),
+            self.cond.mux(self.when_true.0, when_false.0),
+            self.cond.mux(self.when_true.1, when_false.1),
+            self.cond.mux(self.when_true.2, when_false.2),
+            self.cond.mux(self.when_true.3, when_false.3),
+            self.cond.mux(self.when_true.4, when_false.4),
+            self.cond.mux(self.when_true.5, when_false.5),
+            self.cond.mux(self.when_true.6, when_false.6),
+            self.cond.mux(self.when_true.7, when_false.7),
         );
         match self.parent {
             ElseIfParent::If(parent) => parent.else_(ret),
@@ -958,21 +808,18 @@ impl<'a>
     }
 }
 
-impl<'a>
-    ElseIf<
+impl<
         'a,
-        (
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-        ),
-    >
+        R1: Into<&'a Signal<'a>>,
+        R2: Into<&'a Signal<'a>>,
+        R3: Into<&'a Signal<'a>>,
+        R4: Into<&'a Signal<'a>>,
+        R5: Into<&'a Signal<'a>>,
+        R6: Into<&'a Signal<'a>>,
+        R7: Into<&'a Signal<'a>>,
+        R8: Into<&'a Signal<'a>>,
+        R9: Into<&'a Signal<'a>>,
+    > ElseIf<'a, (R1, R2, R3, R4, R5, R6, R7, R8, R9)>
 {
     pub fn else_<
         S1: Into<&'a Signal<'a>>,
@@ -986,17 +833,7 @@ impl<'a>
         S9: Into<&'a Signal<'a>>,
     >(
         self,
-        when_false: (
-            S1,
-            S2,
-            S3,
-            S4,
-            S5,
-            S6,
-            S7,
-            S8,
-            S9,
-        ),
+        when_false: (S1, S2, S3, S4, S5, S6, S7, S8, S9),
     ) -> (
         &'a Signal<'a>,
         &'a Signal<'a>,
@@ -1009,15 +846,15 @@ impl<'a>
         &'a Signal<'a>,
     ) {
         let ret = (
-            self.cond.mux(self.when_true.0, when_false.0.into()),
-            self.cond.mux(self.when_true.1, when_false.1.into()),
-            self.cond.mux(self.when_true.2, when_false.2.into()),
-            self.cond.mux(self.when_true.3, when_false.3.into()),
-            self.cond.mux(self.when_true.4, when_false.4.into()),
-            self.cond.mux(self.when_true.5, when_false.5.into()),
-            self.cond.mux(self.when_true.6, when_false.6.into()),
-            self.cond.mux(self.when_true.7, when_false.7.into()),
-            self.cond.mux(self.when_true.8, when_false.8.into()),
+            self.cond.mux(self.when_true.0, when_false.0),
+            self.cond.mux(self.when_true.1, when_false.1),
+            self.cond.mux(self.when_true.2, when_false.2),
+            self.cond.mux(self.when_true.3, when_false.3),
+            self.cond.mux(self.when_true.4, when_false.4),
+            self.cond.mux(self.when_true.5, when_false.5),
+            self.cond.mux(self.when_true.6, when_false.6),
+            self.cond.mux(self.when_true.7, when_false.7),
+            self.cond.mux(self.when_true.8, when_false.8),
         );
         match self.parent {
             ElseIfParent::If(parent) => parent.else_(ret),
@@ -1026,22 +863,19 @@ impl<'a>
     }
 }
 
-impl<'a>
-    ElseIf<
+impl<
         'a,
-        (
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-        ),
-    >
+        R1: Into<&'a Signal<'a>>,
+        R2: Into<&'a Signal<'a>>,
+        R3: Into<&'a Signal<'a>>,
+        R4: Into<&'a Signal<'a>>,
+        R5: Into<&'a Signal<'a>>,
+        R6: Into<&'a Signal<'a>>,
+        R7: Into<&'a Signal<'a>>,
+        R8: Into<&'a Signal<'a>>,
+        R9: Into<&'a Signal<'a>>,
+        R10: Into<&'a Signal<'a>>,
+    > ElseIf<'a, (R1, R2, R3, R4, R5, R6, R7, R8, R9, R10)>
 {
     pub fn else_<
         S1: Into<&'a Signal<'a>>,
@@ -1056,18 +890,7 @@ impl<'a>
         S10: Into<&'a Signal<'a>>,
     >(
         self,
-        when_false: (
-            S1,
-            S2,
-            S3,
-            S4,
-            S5,
-            S6,
-            S7,
-            S8,
-            S9,
-            S10,
-        ),
+        when_false: (S1, S2, S3, S4, S5, S6, S7, S8, S9, S10),
     ) -> (
         &'a Signal<'a>,
         &'a Signal<'a>,
@@ -1081,16 +904,16 @@ impl<'a>
         &'a Signal<'a>,
     ) {
         let ret = (
-            self.cond.mux(self.when_true.0, when_false.0.into()),
-            self.cond.mux(self.when_true.1, when_false.1.into()),
-            self.cond.mux(self.when_true.2, when_false.2.into()),
-            self.cond.mux(self.when_true.3, when_false.3.into()),
-            self.cond.mux(self.when_true.4, when_false.4.into()),
-            self.cond.mux(self.when_true.5, when_false.5.into()),
-            self.cond.mux(self.when_true.6, when_false.6.into()),
-            self.cond.mux(self.when_true.7, when_false.7.into()),
-            self.cond.mux(self.when_true.8, when_false.8.into()),
-            self.cond.mux(self.when_true.9, when_false.9.into()),
+            self.cond.mux(self.when_true.0, when_false.0),
+            self.cond.mux(self.when_true.1, when_false.1),
+            self.cond.mux(self.when_true.2, when_false.2),
+            self.cond.mux(self.when_true.3, when_false.3),
+            self.cond.mux(self.when_true.4, when_false.4),
+            self.cond.mux(self.when_true.5, when_false.5),
+            self.cond.mux(self.when_true.6, when_false.6),
+            self.cond.mux(self.when_true.7, when_false.7),
+            self.cond.mux(self.when_true.8, when_false.8),
+            self.cond.mux(self.when_true.9, when_false.9),
         );
         match self.parent {
             ElseIfParent::If(parent) => parent.else_(ret),
@@ -1099,23 +922,20 @@ impl<'a>
     }
 }
 
-impl<'a>
-    ElseIf<
+impl<
         'a,
-        (
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-        ),
-    >
+        R1: Into<&'a Signal<'a>>,
+        R2: Into<&'a Signal<'a>>,
+        R3: Into<&'a Signal<'a>>,
+        R4: Into<&'a Signal<'a>>,
+        R5: Into<&'a Signal<'a>>,
+        R6: Into<&'a Signal<'a>>,
+        R7: Into<&'a Signal<'a>>,
+        R8: Into<&'a Signal<'a>>,
+        R9: Into<&'a Signal<'a>>,
+        R10: Into<&'a Signal<'a>>,
+        R11: Into<&'a Signal<'a>>,
+    > ElseIf<'a, (R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11)>
 {
     pub fn else_<
         S1: Into<&'a Signal<'a>>,
@@ -1131,19 +951,7 @@ impl<'a>
         S11: Into<&'a Signal<'a>>,
     >(
         self,
-        when_false: (
-            S1,
-            S2,
-            S3,
-            S4,
-            S5,
-            S6,
-            S7,
-            S8,
-            S9,
-            S10,
-            S11,
-        ),
+        when_false: (S1, S2, S3, S4, S5, S6, S7, S8, S9, S10, S11),
     ) -> (
         &'a Signal<'a>,
         &'a Signal<'a>,
@@ -1158,17 +966,17 @@ impl<'a>
         &'a Signal<'a>,
     ) {
         let ret = (
-            self.cond.mux(self.when_true.0, when_false.0.into()),
-            self.cond.mux(self.when_true.1, when_false.1.into()),
-            self.cond.mux(self.when_true.2, when_false.2.into()),
-            self.cond.mux(self.when_true.3, when_false.3.into()),
-            self.cond.mux(self.when_true.4, when_false.4.into()),
-            self.cond.mux(self.when_true.5, when_false.5.into()),
-            self.cond.mux(self.when_true.6, when_false.6.into()),
-            self.cond.mux(self.when_true.7, when_false.7.into()),
-            self.cond.mux(self.when_true.8, when_false.8.into()),
-            self.cond.mux(self.when_true.9, when_false.9.into()),
-            self.cond.mux(self.when_true.10, when_false.10.into()),
+            self.cond.mux(self.when_true.0, when_false.0),
+            self.cond.mux(self.when_true.1, when_false.1),
+            self.cond.mux(self.when_true.2, when_false.2),
+            self.cond.mux(self.when_true.3, when_false.3),
+            self.cond.mux(self.when_true.4, when_false.4),
+            self.cond.mux(self.when_true.5, when_false.5),
+            self.cond.mux(self.when_true.6, when_false.6),
+            self.cond.mux(self.when_true.7, when_false.7),
+            self.cond.mux(self.when_true.8, when_false.8),
+            self.cond.mux(self.when_true.9, when_false.9),
+            self.cond.mux(self.when_true.10, when_false.10),
         );
         match self.parent {
             ElseIfParent::If(parent) => parent.else_(ret),
@@ -1177,24 +985,21 @@ impl<'a>
     }
 }
 
-impl<'a>
-    ElseIf<
+impl<
         'a,
-        (
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-            &'a Signal<'a>,
-        ),
-    >
+        R1: Into<&'a Signal<'a>>,
+        R2: Into<&'a Signal<'a>>,
+        R3: Into<&'a Signal<'a>>,
+        R4: Into<&'a Signal<'a>>,
+        R5: Into<&'a Signal<'a>>,
+        R6: Into<&'a Signal<'a>>,
+        R7: Into<&'a Signal<'a>>,
+        R8: Into<&'a Signal<'a>>,
+        R9: Into<&'a Signal<'a>>,
+        R10: Into<&'a Signal<'a>>,
+        R11: Into<&'a Signal<'a>>,
+        R12: Into<&'a Signal<'a>>,
+    > ElseIf<'a, (R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12)>
 {
     pub fn else_<
         S1: Into<&'a Signal<'a>>,
@@ -1211,20 +1016,7 @@ impl<'a>
         S12: Into<&'a Signal<'a>>,
     >(
         self,
-        when_false: (
-            S1,
-            S2,
-            S3,
-            S4,
-            S5,
-            S6,
-            S7,
-            S8,
-            S9,
-            S10,
-            S11,
-            S12,
-        ),
+        when_false: (S1, S2, S3, S4, S5, S6, S7, S8, S9, S10, S11, S12),
     ) -> (
         &'a Signal<'a>,
         &'a Signal<'a>,
@@ -1240,18 +1032,18 @@ impl<'a>
         &'a Signal<'a>,
     ) {
         let ret = (
-            self.cond.mux(self.when_true.0, when_false.0.into()),
-            self.cond.mux(self.when_true.1, when_false.1.into()),
-            self.cond.mux(self.when_true.2, when_false.2.into()),
-            self.cond.mux(self.when_true.3, when_false.3.into()),
-            self.cond.mux(self.when_true.4, when_false.4.into()),
-            self.cond.mux(self.when_true.5, when_false.5.into()),
-            self.cond.mux(self.when_true.6, when_false.6.into()),
-            self.cond.mux(self.when_true.7, when_false.7.into()),
-            self.cond.mux(self.when_true.8, when_false.8.into()),
-            self.cond.mux(self.when_true.9, when_false.9.into()),
-            self.cond.mux(self.when_true.10, when_false.10.into()),
-            self.cond.mux(self.when_true.11, when_false.11.into()),
+            self.cond.mux(self.when_true.0, when_false.0),
+            self.cond.mux(self.when_true.1, when_false.1),
+            self.cond.mux(self.when_true.2, when_false.2),
+            self.cond.mux(self.when_true.3, when_false.3),
+            self.cond.mux(self.when_true.4, when_false.4),
+            self.cond.mux(self.when_true.5, when_false.5),
+            self.cond.mux(self.when_true.6, when_false.6),
+            self.cond.mux(self.when_true.7, when_false.7),
+            self.cond.mux(self.when_true.8, when_false.8),
+            self.cond.mux(self.when_true.9, when_false.9),
+            self.cond.mux(self.when_true.10, when_false.10),
+            self.cond.mux(self.when_true.11, when_false.11),
         );
         match self.parent {
             ElseIfParent::If(parent) => parent.else_(ret),

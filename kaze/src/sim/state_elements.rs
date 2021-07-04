@@ -53,9 +53,7 @@ impl<'a> StateElements<'a> {
         while let Some(frame) = frames.pop() {
             let signal = frame.signal;
 
-            let reference_count = signal_reference_counts
-                .entry(signal)
-                .or_insert(0);
+            let reference_count = signal_reference_counts.entry(signal).or_insert(0);
             *reference_count += 1;
 
             if *reference_count > 1 {
@@ -96,78 +94,44 @@ impl<'a> StateElements<'a> {
                 }
 
                 graph::SignalData::UnOp { source, .. } => {
-                    frames.push(Frame {
-                        signal: source,
-                    });
+                    frames.push(Frame { signal: source });
                 }
                 graph::SignalData::SimpleBinOp { lhs, rhs, .. } => {
-                    frames.push(Frame {
-                        signal: lhs,
-                    });
-                    frames.push(Frame {
-                        signal: rhs,
-                    });
+                    frames.push(Frame { signal: lhs });
+                    frames.push(Frame { signal: rhs });
                 }
                 graph::SignalData::AdditiveBinOp { lhs, rhs, .. } => {
-                    frames.push(Frame {
-                        signal: lhs,
-                    });
-                    frames.push(Frame {
-                        signal: rhs,
-                    });
+                    frames.push(Frame { signal: lhs });
+                    frames.push(Frame { signal: rhs });
                 }
                 graph::SignalData::ComparisonBinOp { lhs, rhs, .. } => {
-                    frames.push(Frame {
-                        signal: lhs,
-                    });
-                    frames.push(Frame {
-                        signal: rhs,
-                    });
+                    frames.push(Frame { signal: lhs });
+                    frames.push(Frame { signal: rhs });
                 }
                 graph::SignalData::ShiftBinOp { lhs, rhs, .. } => {
-                    frames.push(Frame {
-                        signal: lhs,
-                    });
-                    frames.push(Frame {
-                        signal: rhs,
-                    });
+                    frames.push(Frame { signal: lhs });
+                    frames.push(Frame { signal: rhs });
                 }
 
                 graph::SignalData::Mul { lhs, rhs, .. } => {
-                    frames.push(Frame {
-                        signal: lhs,
-                    });
-                    frames.push(Frame {
-                        signal: rhs,
-                    });
+                    frames.push(Frame { signal: lhs });
+                    frames.push(Frame { signal: rhs });
                 }
                 graph::SignalData::MulSigned { lhs, rhs, .. } => {
-                    frames.push(Frame {
-                        signal: lhs,
-                    });
-                    frames.push(Frame {
-                        signal: rhs,
-                    });
+                    frames.push(Frame { signal: lhs });
+                    frames.push(Frame { signal: rhs });
                 }
 
                 graph::SignalData::Bits { source, .. } => {
-                    frames.push(Frame {
-                        signal: source,
-                    });
+                    frames.push(Frame { signal: source });
                 }
 
                 graph::SignalData::Repeat { source, .. } => {
-                    frames.push(Frame {
-                        signal: source,
-                    });
+                    frames.push(Frame { signal: source });
                 }
                 graph::SignalData::Concat { lhs, rhs, .. } => {
-                    frames.push(Frame {
-                        signal: lhs,
-                    });
-                    frames.push(Frame {
-                        signal: rhs,
-                    });
+                    frames.push(Frame { signal: lhs });
+                    frames.push(Frame { signal: rhs });
                 }
 
                 graph::SignalData::Mux {
@@ -176,15 +140,9 @@ impl<'a> StateElements<'a> {
                     when_false,
                     ..
                 } => {
-                    frames.push(Frame {
-                        signal: cond,
-                    });
-                    frames.push(Frame {
-                        signal: when_true,
-                    });
-                    frames.push(Frame {
-                        signal: when_false,
-                    });
+                    frames.push(Frame { signal: cond });
+                    frames.push(Frame { signal: when_true });
+                    frames.push(Frame { signal: when_false });
                 }
 
                 graph::SignalData::MemReadPortOutput { mem, .. } => {
@@ -222,23 +180,13 @@ impl<'a> StateElements<'a> {
                         },
                     );
                     for (address, enable) in mem.read_ports.borrow().iter() {
-                        frames.push(Frame {
-                            signal: address,
-                        });
-                        frames.push(Frame {
-                            signal: enable,
-                        });
+                        frames.push(Frame { signal: address });
+                        frames.push(Frame { signal: enable });
                     }
                     if let Some((address, value, enable)) = *mem.write_port.borrow() {
-                        frames.push(Frame {
-                            signal: address,
-                        });
-                        frames.push(Frame {
-                            signal: value,
-                        });
-                        frames.push(Frame {
-                            signal: enable,
-                        });
+                        frames.push(Frame { signal: address });
+                        frames.push(Frame { signal: value });
+                        frames.push(Frame { signal: enable });
                     }
                 }
             }
