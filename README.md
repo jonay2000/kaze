@@ -20,6 +20,8 @@ This enables a user to hack on designs fearlessly, while the API and generators 
 kaze = "0.1"
 ```
 
+## Book
+
 ## Example
 
 ```rust
