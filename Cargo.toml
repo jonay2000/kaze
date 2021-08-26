@@ -3,4 +3,5 @@
 members = [
     "kaze",
     "sim-tests",
+    "book/kaze-examples",
 ]
