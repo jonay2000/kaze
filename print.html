@@ -165,6 +165,39 @@ and memory, and how these, together with the ALU form a data loop. Next up will 
 control logic and conditional execution. More chapters may be added in the future such
 as caching, speculative execution and different computer architectures.</p>
 <h1><a class="header" href="#chapter-1-logic-gates" id="chapter-1-logic-gates">chapter 1: Logic gates</a></h1>
+<p>Processors are filled with components called logic gates. Logic gates are simple
+machines taking one or more inputs and producing an output based on that. Probably 
+the simplest is called an inverter (or &quot;not&quot; gate). It has a single input and always
+outputs the opposite of whatever it gets in. In Kaze, this can be represented
+as follows:</p>
+<pre><pre class="playpen"><code class="language-rust no_run noplayground">
+<span class="boring">#![allow(unused_variables)]
+</span><span class="boring">fn main() {
+</span>let ctx = Context::new();
+let inverter = ctx.module(&quot;inverter&quot;);
+
+// the second parameter is the bit width (which is 1 here).
+let i = inverter.input(&quot;i&quot;, 1);
+inverter.output(&quot;o&quot;, !i);
+<span class="boring">}
+</span></code></pre></pre>
+<p>The inverter takes a 1 bit input, and outputs the opposite by using the <code>!</code> operator.</p>
+<p>Using Kaze, it is now possible to convert this simple module definition to Rust code
+simulating the working of this logic gate: </p>
+<pre><pre class="playpen"><code class="language-rust no_run noplayground">
+<span class="boring">#![allow(unused_variables)]
+</span><span class="boring">fn main() {
+</span>sim::generate(inverter, sim::GenerationOptions::default(), output_file)?;
+<span class="boring">}
+</span></code></pre></pre>
+<p>However, this simulating code on its own is quite useless. We want to see the module working!
+To do this we instantiate the inverter as part as a new testing module:</p>
+<pre><pre class="playpen"><code class="language-rust no_run noplayground">
+<span class="boring">#![allow(unused_variables)]
+</span>
+<span class="boring">fn main() {
+</span><span class="boring">}
+</span></code></pre></pre>
 
                     </main>
 
