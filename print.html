@@ -83,7 +83,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div id="sidebar-scrollbox" class="sidebar-scrollbox">
-                <ol class="chapter"><li class="expanded affix "><a href="chapter_01.html">chapter 1</a></li></ol>
+                <ol class="chapter"><li class="expanded affix "><a href="index.html">Introduction</a></li><li class="expanded affix "><a href="chapter_01_logic_gates.html">chapter 1: Logic gates</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -150,7 +150,22 @@
 
                 <div id="content" class="content">
                     <main>
-                        
+                        <h1><a class="header" href="#building-a-cpu-using-kaze" id="building-a-cpu-using-kaze">Building a CPU using Kaze</a></h1>
+<p>Kaze is a library which allows users to describe hardware like
+a hardware descriptor language, as part of Rust source code. In 
+this book all Kaze's features are described by guiding you through 
+an example of a project in Kaze: building a CPU. </p>
+<p>CPU, as you might already know, stands for &quot;Central Processing Unit&quot; and 
+is the heart of any computer. You might even say that the CPU <em>is</em> the computer
+and any other parts are just peripherals. </p>
+<p>This guide will be split into a number of chapter, also displayed in the sidebar.
+We will start with making some simple logic gates in Kaze, which will then be
+expanded to an Arithmetic and Logic Unit (ALU). After this we will talk about registers
+and memory, and how these, together with the ALU form a data loop. Next up will be 
+control logic and conditional execution. More chapters may be added in the future such
+as caching, speculative execution and different computer architectures.</p>
+<h1><a class="header" href="#chapter-1-logic-gates" id="chapter-1-logic-gates">chapter 1: Logic gates</a></h1>
+
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
